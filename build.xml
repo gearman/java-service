@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- ======================================================================                                                         
+
+     Java Gearman Service
+         
+     Gearman provides a generic application framework to farm out work to other
+     machines or processes that are better suited to do the work. It allows you
+     to do work in parallel, to load balance processing, and to call functions
+     between languages. It can be used in a variety of applications, from
+     high-availability web sites to the transport of database replication events.
+     In other words, it is the nervous system for how distributed processing
+     communicates.
+                   
+     isaiah.v                                                                
+     ====================================================================== -->
+<project name="Java Gearman Service" default="build-all">
+    
+	<description>
+        Gearman provides a generic application framework to farm out work to
+    	other machines or processes that are better suited to do the work.
+    	It allows you to do work in parallel, to load balance processing, and
+    	to call functions between languages. It can be used in a variety of
+    	applications, from high-availability web sites to the transport of
+    	database replication events. In other words, it is the nervous system
+    	for how distributed processing communicates.
+    </description>
+	
+	<!-- project name -->
+	<property name="project" value="gearman" />
+	
+	<!-- current version number -->
+	<property name="version" value="0.0.1" />
+	
+	<!-- source directory -->
+	<property name="src" location="src" />
+	
+	<!-- build directory -->
+	<property name="build" location="bin" />
+	
+	<!-- Javadoc home directory -->
+	<property name="javadoc" location="javadoc" />
+	
+	<!-- Javadoc directory. Developer's documentation -->
+	<property name="javadoc-dev" location="${javadoc}/${project}/${version}/dev" />
+	
+	<!-- Javadoc directoy. User's documentation -->
+	<property name="javadoc-api" location="${javadoc}/${project}/${version}/api" />
+
+    <!-- Builds the executable jar, creates javadocs, and zips source -->
+	<target name="build-all">
+    	<antcall target="jar" />
+    	<antcall target="zip-src" />
+		<antcall target="zip-javadoc" />
+    </target>
+	
+	<!-- Builds the project's executable jar -->
+	<target name="jar" depends="build" description="Builds the project's executable jar">
+		<jar destfile="${basedir}/${project}-${version}.jar" >
+			<fileset dir="${build}" />
+			<fileset file="License.txt" />
+			<manifest>
+				<attribute name="Main-Class" value="org.gearman.Main"/>
+			</manifest>
+		</jar>
+    </target>
+	
+	<!-- Creates a zip of the project's source code -->
+	<target name="zip-src" description="Creates a zip of the source code">
+		<zip destfile="${basedir}/${project}-${version}-src.zip" basedir="${src}" update="true" />
+	</target>
+	
+	<!-- Creates the javadocs -->
+	<target name="javadoc">
+		<mkdir dir="${javadoc-dev}"/>
+		<mkdir dir="${javadoc-api}"/>
+		<javadoc destdir="${javadoc-dev}" sourcepath="${src}" packagenames="org.gearman" private="true"/>
+		<javadoc destdir="${javadoc-api}" sourcepath="${src}" packagenames="org.gearman" />
+	</target>
+	
+	<target name="zip-javadoc" depends="javadoc">
+		<zip destfile="${basedir}/${project}-${version}-devdoc.zip" basedir="${javadoc-dev}" update="true" />
+		<zip destfile="${basedir}/${project}-${version}-apidoc.zip" basedir="${javadoc-api}" update="true" />
+	</target>
+	
+	<target name="test">
+		<!-- TODO -->
+	</target>
+	
+	<!-- Compiles the project -->
+	<target name="build" description="Compiles the project">
+		<mkdir dir="${build}" />
+		<javac destdir="${build}" srcdir="${src}" />
+	</target>
+	
+	<!-- Cleans project folder -->
+	<target name="clean" description="Cleans project folder">
+		<delete dir="${build}" />
+		<delete dir="${javadoc}" />
+	</target>
+
+</project>
