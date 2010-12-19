@@ -20,16 +20,16 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 	
 	/**
 	 * The time that the last PRE_SLEEP packet was sent. If not sleeping,
-	 * this value should be zero
+	 * this value should be Long.MAX_VALUE
 	 */
-	private long noopTimeout = 0;
+	private long noopTimeout = Long.MAX_VALUE;
 	
 	/**
 	 * The time that the last GRAB_JOB packet was sent. If this connection
 	 * is not waiting for a response to a GRAB_JOB packet, this value should
-	 * be zero
+	 * be Long.MAX_VALUE
 	 */
-	private long grabTimeout = 0;
+	private long grabTimeout = Long.MAX_VALUE;
 	
 	WorkerConnectionController(JobServerPoolAbstract<WorkerConnectionController<?>> sc, K key) {
 		super(sc, key);
@@ -153,7 +153,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		// Since the connection is currently in the sleeping state, it will
 		// not yet return to the dispatcher's queue
 				
-		this.grabTimeout = 0;
+		this.grabTimeout = Long.MAX_VALUE;
 		this.noopTimeout = System.currentTimeMillis();
 		
 		this.getDispatcher().done();
@@ -181,7 +181,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 	private final void noop() {
 		// A noop packet has come in. This implies that the connection has
 		// moved from the sleeping state to a state that is ready to work.
-		this.noopTimeout=0;
+		this.noopTimeout=Long.MAX_VALUE;
 		this.toDispatcher();
 	}
 
@@ -234,6 +234,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 	}
 	
 	public final void timeoutCheck(long time) {
+		
 		if(time-this.grabTimeout>GRAB_TIMEOUT) {
 			// If the server fails to send back a response to the GRAB_JOB packet,
 			// we log the error and close the connection without re-queuing
