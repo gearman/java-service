@@ -8,6 +8,7 @@ import org.gearman.core.GearmanCodec;
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
+import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanVariables;
 import org.gearman.util.ConcurrentHashSet;
@@ -41,8 +42,12 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	}
 
 	@Override
-	public <X> void createGearmanConnection(GearmanConnectionHandler<X> handler) {
-		new LocalConnection<ServerClient,X>(this,handler);
+	public <A1,A2> void createGearmanConnection(GearmanConnectionHandler<A1> handler, A2 att, GearmanFailureHandler<A2> failHandler) {
+		if(this.isShutdown()) {
+			failHandler.onFail(new IOException("Closed Server"), att);
+			return;
+		}
+		new LocalConnection<ServerClient,A1>(this,handler);
 	}
 
 	@Override
@@ -98,6 +103,8 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<ServerClient> conn) {
+		System.out.println(packet.getPacketType());
+		
 		assert packet!=null;
 		assert conn.getAttachment()!=null;
 		

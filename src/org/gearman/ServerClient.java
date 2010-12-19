@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanPacket;
+import org.gearman.util.ByteArray;
 
 
 /**

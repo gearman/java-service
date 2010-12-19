@@ -1,7 +1,6 @@
 package org.gearman;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,12 +27,23 @@ public final class Gearman implements GearmanService {
 	private final ScheduledExecutorService pool;
 	
 	public Gearman() throws IOException {
-		this.pool = new Scheduler(Executors.newCachedThreadPool());
+		final Scheduler s = new Scheduler(Executors.newCachedThreadPool());
+		s.setThreadTimeout(60L, TimeUnit.SECONDS);
+		s.allowSchedulerThreadTimeOut(true);
+		
+		this.pool = s;
+		
 		this.gcm = new GearmanConnectionManager(this.pool);
 	}
 	
 	public Gearman(final int coreThreads) throws IOException {
-		this.pool = new Scheduler(new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>()));
+		final Scheduler s = new Scheduler(new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>()));
+		s.setThreadTimeout(60L, TimeUnit.SECONDS);
+		s.allowSchedulerThreadTimeOut(true);
+		
+		this.pool = s;
+		
+		
 		this.gcm = new GearmanConnectionManager(this.pool);
 	}
 		
@@ -46,7 +56,7 @@ public final class Gearman implements GearmanService {
 		return null;
 	}
 	public final GearmanWorker createGearmanWorker() {
-		final GearmanWorker worker = new WorkerImplNew(this);
+		final GearmanWorker worker = new WorkerImpl(this);
 		this.services.add(worker);
 		
 		return worker;

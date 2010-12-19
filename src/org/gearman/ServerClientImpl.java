@@ -8,6 +8,7 @@ import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanVariables;
+import org.gearman.util.ByteArray;
 import org.gearman.util.ConcurrentHashSet;
 
 class ServerClientImpl implements ServerClient{

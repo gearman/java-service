@@ -8,6 +8,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.gearman.ServerJob.JobPriority;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanVariables;
+import org.gearman.util.ByteArray;
 import org.gearman.util.EqualsLock;
 
 class ServerFunction {
@@ -57,7 +58,6 @@ class ServerFunction {
 	}
 	
 	public final void createJob(final ByteArray uniqueID, final byte[] data, final JobPriority priority, final ServerClient creator) {
-		// TODO create and queue job
 		
 		final Integer key = uniqueID.hashCode(); 
 		this.lock.lock(key);
@@ -132,7 +132,7 @@ class ServerFunction {
 		return true;
 	}
 	
-	private final class Job extends ServerAbstractJob {
+	private final class Job extends ServerJobAbstract {
 
 		Job(ByteArray uniqueID, byte[] data, JobPriority priority, ServerClient creator) {
 			super(uniqueID, data, priority, creator);

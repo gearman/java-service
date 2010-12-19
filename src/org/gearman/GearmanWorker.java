@@ -7,10 +7,8 @@
  */
 package org.gearman;
 
-import java.net.InetSocketAddress;
 import java.util.Set;
-
-import org.gearman.core.GearmanCompletionHandler;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -21,41 +19,12 @@ import org.gearman.core.GearmanCompletionHandler;
  * generated or as a job's state changes, the worker passes this information
  * back to the Job Server.
  */
-public interface GearmanWorker extends GearmanService{
+public interface GearmanWorker extends GearmanJobServerPool {
 
-    /**
-     * Register a new Gearman Job Server with the worker.
-     * @param conn {@link GearmanJobServerConnection} connected to the
-     *          Gearman Job Server
-     *
-     * @return returns true if a connection to the server was established and
-     *         the server was added to the worker, else false.
-     *
-     * @throws IllegalArgumentException If an invalid connection has been
-     *         specified.
-     *
-     * @throws IllegalStateException If the worker has already been stopped.
-     */
-    public <A> void addServer(InetSocketAddress adrs, A att, GearmanCompletionHandler<A> callback);
-    public <A> void addServer(String host, int port, A att, GearmanCompletionHandler<A> callback);
-    public <A> void addServer(GearmanServer srvr, A att, GearmanCompletionHandler<A> callback);
     
-
-    public void setMaximumConcurrency(int threads);
+    public void setMaximumConcurrency(int maxConcurrentJobs);
     public int getMaximumConcurrency();
-    /**
-     * Has a connection to the specified Gearman Job Server been registerd with
-     * this worker.
-     *
-     * @param conn The connection to the specified Gearman Job Server.
-     *
-     * @return  True if the Gearman Job Server has been registerd with the worker,
-     * otherwise false.
-     */
-    public boolean hasServer(InetSocketAddress address);
-    public boolean hasServer(String host, int port);
-    public boolean hasServer(GearmanServer srvr);    
-
+    
     /**
      * Registers a particular {@link GearmanFunction} with the worker. Once a
      * function has been registered with a worker, the worker is capable of
@@ -67,11 +36,11 @@ public interface GearmanWorker extends GearmanService{
      * @param function The function being registered with the Worker.
      */
     public GearmanFunction addFunction(String name, GearmanFunction function);
-    public GearmanFunction addFunction(String name, GearmanFunction function, long timout);
+    public GearmanFunction addFunction(String name, GearmanFunction function, long timeout, TimeUnit unit);
     
     public GearmanFunction getFunction(String name);
     public long getFunctionTimeout(String name);
-
+    
     /**
      * Retrieve the names of all functions that have been registered with this
      * worker. If no functions have been registered, any empty set should be
@@ -80,28 +49,6 @@ public interface GearmanWorker extends GearmanService{
      * @return The name of all registered functions.
      */
     public Set<String> getRegisteredFunctions();
-
-    /**
-     * Set the ID for a particular worker instance.  This enables monitoring and
-     * reporting commands to uniquely identify specific workers.
-     *
-     * @param id The ID.
-     */
-    public void setWorkerID(String id);
-
-    /**
-     * Retrieves the ID used by this worker instance.
-     *
-     * @return worker ID
-     */
-    public String getWorkerID();
-    
-    public boolean removeServer(InetSocketAddress adrs);
-    public boolean removeServer(String host, int port);
-    public boolean removeServer(GearmanServer server);
-    public void removeAllServers();
-    
-    public int getServerCount();
     
     /**
      * Unregisters a particular {@link GearmanFunction} from the worker. Once
@@ -118,5 +65,4 @@ public interface GearmanWorker extends GearmanService{
      *
      */
     public void unregisterAll();
-
 }

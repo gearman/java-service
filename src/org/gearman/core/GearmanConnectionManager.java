@@ -87,9 +87,9 @@ public class GearmanConnectionManager {
 		@Override
 		public final void onAccept(final Socket<Connection> socket) {
 			try {
+				socket.setTcpNoDelay(true);
 				socket.setKeepAlive(true);
 				socket.setSoLinger(true, 1000);
-				socket.setTcpNoDelay(true);
 				
 				socket.setAttachment(new Connection(socket));
 			} catch (SocketException e) {

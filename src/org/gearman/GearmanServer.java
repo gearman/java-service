@@ -5,8 +5,9 @@ import java.util.Set;
 
 import org.gearman.core.GearmanCodec;
 import org.gearman.core.GearmanConnectionHandler;
+import org.gearman.core.GearmanFailureHandler;
 
-public interface GearmanServer extends GearmanService{
+public interface GearmanServer extends GearmanService {
 	
 	/**
 	 * Attempts to open the default port to listen on
@@ -64,6 +65,6 @@ public interface GearmanServer extends GearmanService{
 	 * @return
 	 * 		A local connection to this GearmanServer
 	 */
-	public <X> void createGearmanConnection(GearmanConnectionHandler<X> handler);
+	public <A1,A2> void createGearmanConnection(GearmanConnectionHandler<A1> handler, A2 att, GearmanFailureHandler<A2> failHandler);
 }
 

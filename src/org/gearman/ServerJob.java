@@ -7,6 +7,7 @@
 package org.gearman;
 
 import org.gearman.core.GearmanPacket;
+import org.gearman.util.ByteArray;
 
 interface ServerJob {
 

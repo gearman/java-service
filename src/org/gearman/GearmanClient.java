@@ -23,7 +23,6 @@ public interface GearmanClient extends GearmanService {
 	 * @param server
 	 *            The GearmanServer used to run tasks
 	 */
-	public void addServer(GearmanServer server);
 	public <A> void addServer(GearmanServer server, A att, GearmanCompletionHandler<A> callback);
 
 	/**
@@ -34,7 +33,6 @@ public interface GearmanClient extends GearmanService {
 	 * @param adrs
 	 *            The address of the job server
 	 */
-	public void addServer(InetSocketAddress adrs);
 	public <A> void addServer(InetSocketAddress adrs, A att, GearmanCompletionHandler<A> callback);
 
 	/**
@@ -47,7 +45,6 @@ public interface GearmanClient extends GearmanService {
 	 * @param port
 	 *            Port of the server to add.
 	 */
-	public void addServer(String host, int port);
 	public <A> void addServer(String host, int port, A att, GearmanCompletionHandler<A> callback);
 	
 
@@ -163,6 +160,8 @@ public interface GearmanClient extends GearmanService {
 	 *             servers
 	 */
 	public <A> void submitJob(GearmanJob job, A att, GearmanCompletionHandler<A> callback);
+	
+	public <A> void submitJob(GearmanJob job);
 
 	/**
 	 * By default the exception callback channel is closed. The client will need

@@ -19,7 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A utility that schedules tasks to run on a {@link ExecutorService} defined by the user.
+ * A utility that schedules tasks to run on a {@link ExecutorService} defined by the user such that
+ * it abides by the {@link ScheduledExecutorService} documentation.
+ * 
  * @author isaiah
  */
 public class Scheduler implements ScheduledExecutorService {
@@ -90,7 +92,6 @@ public class Scheduler implements ScheduledExecutorService {
 							}
 						}
 					}
-
 					
 					// If still empty, there is an error in logic
 					assert !Scheduler.this.queue.isEmpty();
@@ -210,6 +211,16 @@ public class Scheduler implements ScheduledExecutorService {
 	private long threadTimeout = 60000000000L;	// 60 seconds
 	/** If true the driving thread can timeout, otherwise it cannot */
 	private boolean isThreadTimeout = false;
+	
+	public final void allowSchedulerThreadTimeOut(boolean isThreadTimeout) {
+		this.isThreadTimeout = isThreadTimeout;
+		this.newEvent();
+	}
+	
+	public final void setThreadTimeout(long timeout, TimeUnit value) {
+		this.threadTimeout = value.toNanos(timeout);
+		this.newEvent();
+	}
 	
 	/**
 	 * Creates a new Scheduler with the given {@link ExecutorService}.<br>

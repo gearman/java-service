@@ -4,6 +4,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.gearman.util.ByteArray;
 import org.gearman.util.EqualsLock;
 
 class ServerFunctionMap {

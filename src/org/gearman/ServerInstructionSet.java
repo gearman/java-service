@@ -12,6 +12,7 @@ import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanVariables;
 import org.gearman.core.GearmanPacket.Magic;
 import org.gearman.core.GearmanPacket.Type;
+import org.gearman.util.ByteArray;
 
 
 /**
@@ -38,7 +39,6 @@ final class ServerInstructionSet {
 	 * 					the packet 
 	 */
 	public final void execute(final GearmanPacket packet, final ServerClient client) {
-		System.out.println(packet.getPacketType());
 		
 		switch(packet.getPacketType()) {
 		
@@ -319,7 +319,7 @@ final class ServerInstructionSet {
 		assert jobHandle != null;
 		final ByteArray jobHandleBA = new ByteArray(jobHandle);
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null){
 			//Send unknown job STATUS_RES packet 
 			final byte[] unknown = new byte[]{'0'};
@@ -486,7 +486,7 @@ final class ServerInstructionSet {
 		assert jobHandle != null;
 		final ByteArray jobHandleBA = new ByteArray(jobHandle);
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
 			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null ,null /*TODO*/);
 		} else {
@@ -514,7 +514,7 @@ final class ServerInstructionSet {
 		assert jobHandle != null;
 		final ByteArray jobHandleBA = new ByteArray(jobHandle);
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
 			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null ,null /*TODO*/);
 		} else {
@@ -555,7 +555,7 @@ final class ServerInstructionSet {
 		assert jobHandle != null;
 		final ByteArray jobHandleBA = new ByteArray(jobHandle);
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
 			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null ,null /*TODO*/);
 		} else {
@@ -577,7 +577,7 @@ final class ServerInstructionSet {
 		assert jobHandle != null;
 		final ByteArray jobHandleBA = new ByteArray(jobHandle);
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null){
 			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null ,null /*TODO*/);
 		} else {
@@ -610,7 +610,7 @@ final class ServerInstructionSet {
 		final byte[] den = packet.getArgumentData(2);
 		assert den != null;
 		
-		final ServerJob job = ServerAbstractJob.getJob(jobHandleBA);
+		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
 			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null ,null /*TODO*/);
 		} else {
