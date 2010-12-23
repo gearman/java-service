@@ -1,67 +1,80 @@
 package echo;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.gearman.Gearman;
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
-import org.gearman.core.GearmanCompletionHandler;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 
 public class EchoClient {
 	
 	public static void main(String[] args) throws IOException {
 		
-		// Create new Gearman instance
+		/*
+		 * Create a Gearman instance
+		 */
 		final Gearman gearman = new Gearman();
 		
-		// Create client instance
+		/*
+		 * Create a new GearmanClient
+		 */
 		final GearmanClient client = gearman.createGearmanClient();
 		
-		// Add server
-		client.addServer("localhost", 4730, null, new GearmanCompletionHandler<Object>(){
-			@Override
-			public void onComplete(Object attachment) {
-				// Called after we have successfully connected to the specified job server.
-				// If successful, there is nothing to do
-			}
-			@Override
-			public void onFail(Throwable exc, Object attachment) {
-				// Called if adding the server fails.
-
-				// If we fail to connect to the server, we're done. So we need to shutdown
-				gearman.shutdown();
-			}
-		});
-		
+		/*
+		 * Tell the client that it can connect to a job server on the localhost listening 
+		 * on the default port. The address is only added to a list. The client
+		 * implementation will decide when the connection needs to be active
+		 *  
+`		 * See the method "setLostConnectionPolicy(GearmanLostConnectionPolicy)"
+		 * for information about setting connection failure actions
+		 */
+		client.addServer(new InetSocketAddress("localhost",GearmanSettings.DEFAULT_PORT));
 		
 		/*
-		 * Submit a job to be executed by the function "echo" which will echo the given string,
-		 * "Hello World"
-		 * 
-		 * TODO make sure that if a server is in the process of connecting, we don't fail the
-		 * job until
-		 * 
-		 * Though the GearmanClient may still be connecting to a job server, the job will not fail
-		 * until the attempt to connect fails.
+		 * Submit a GearmanJob to be executed by a worker who knows how to execute the
+		 * function "echo".
 		 */
-		client.submitJob(new GearmanJob("echo", "Hello World".getBytes(GearmanVariables.UTF_8)) {
+		client.submitJob(new GearmanJob("echo", "Hello World".getBytes(GearmanSettings.UTF_8)) {
+			
 			@Override
 			public void callbackData(byte[] data) {
-				// Called when data is sent on the data callback channel
+				/*
+				 *  This method is used to send intermediate data from the worker to the
+				 *  client while the job is executing.  
+				 */
+				
 				// No data sent on the data callback channel in the echo function
+				assert false;
 			}
+			
 			@Override
 			public void callbackException(byte[] exception) {
-				// Called when data is sent on the exception callback channel
+				/*
+				 *  This method is used to send exception information from the worker to the
+				 *  client while the job is executing.
+				 *  
+				 *  By default, the exception callback channel is closed. To open, call
+				 *  client.setExceptionChannel(true);
+				 */
+				
 				// No data sent on the exception callback channel in the echo function
+				assert false;
 			}
+			
 			@Override
 			public void callbackWarning(byte[] warning) {
-				// Called when data is sent on the warning callback channel 
+				/*
+				 *  This method is used to send warning information from the worker to the
+				 *  client while the job is executing.
+				 */
+
 				// No data sent on the warning callback channel in the echo function
+				assert false;
 			}
+			
 			@Override
 			protected void onComplete(GearmanJobResult result) {
 				// Called when the result has been sent back to the client
@@ -69,7 +82,7 @@ public class EchoClient {
 				// If the job was successful
 				if(result.isSuccessful()) {
 					// If the job was successful, print the returned string
-					System.out.println(new String(result.getResultData(),GearmanVariables.UTF_8));
+					System.out.println(new String(result.getResultData(),GearmanSettings.UTF_8));
 				} else {
 					// If the job failed, print that it failed.  A job may fail for a few resins,
 					// but the most likely would be due failing to send it to a job server

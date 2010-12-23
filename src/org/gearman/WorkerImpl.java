@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.gearman.GearmanLostConnectionPolicy.Action;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
-import org.gearman.core.GearmanConnection;
 
 public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?>> implements GearmanWorker {
 	
@@ -63,7 +62,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		}
 
 		@Override
-		protected void onOpenServer() {
+		protected void onConnect(ControllerState oldState) {
 			super.getKey().createGearmanConnection(this, null, this);
 		}
 
@@ -73,25 +72,29 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		}
 
 		@Override
-		protected void onDropServer() {
+		protected void onDrop(ControllerState oldState) {
 			// No cleanup required
 		}
 
 		@Override
-		public void onAccept(final GearmanConnection<Object> conn) {
-			super.onAccept(conn);
-			
+		public void onOpen(ControllerState oldState) {
 			if(WorkerImpl.this.funcMap.isEmpty()) {
 				super.closeServer();
 			}
 		}
 		
 		@Override
-		protected void onAddedServer() {
+		protected void onNew() {
 			if(!WorkerImpl.this.funcMap.isEmpty()) {
 				super.openServer(false);
 			}
 		}
+
+		@Override
+		protected void onClose(ControllerState oldState) { }
+
+		@Override
+		protected void onWait(ControllerState oldState) { }
 	}
 	
 	private class RemoteConnectionController extends WorkerConnectionController<InetSocketAddress> {
@@ -122,7 +125,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		}
 
 		@Override
-		protected void onOpenServer() {
+		protected void onConnect(ControllerState oldState) {
 			gearman.getGearmanConnectionManager().createGearmanConnection(super.getKey(), this, null, this);
 		}
 
@@ -148,16 +151,22 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		}
 
 		@Override
-		protected void onDropServer() {
+		protected void onDrop(ControllerState oldState) {
 			// No cleanup required
 		}
 
 		@Override
-		protected void onAddedServer() {
+		protected void onNew() {
 			if(!WorkerImpl.this.funcMap.isEmpty()) {
 				super.openServer(false);
 			}
 		}
+
+		@Override
+		protected void onClose(ControllerState oldState) { }
+
+		@Override
+		protected void onWait(ControllerState oldState) { }
 	}
 	
 	private final class FunctionInfo {
@@ -292,11 +301,5 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 			this.funcMap.clear();
 			if(this.future!=null) future.cancel(false);
 		}
-	}
-
-	@Override
-	protected void onAddedConnectionControler(WorkerConnectionController<?> controller) {
-		// Check if we can open the connection
-		controller.openServer(false);
 	}
 }

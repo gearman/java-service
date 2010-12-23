@@ -20,7 +20,7 @@ import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanConnectionManager;
 import org.gearman.core.GearmanFailureHandler;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 
 import com.googlecode.jgasp.ArgumentParser;
 
@@ -81,7 +81,7 @@ public class GearmanShell {
 			" -?, --help                 Print this help menu and exit\n";
 		
 		private String host = "localhost";
-		private int port = GearmanVariables.DEFAULT_PORT;
+		private int port = GearmanSettings.DEFAULT_PORT;
 		
 		public ArgumentController (final String[] args) {
 			
@@ -274,17 +274,17 @@ public class GearmanShell {
 					
 					//Write all but the last argument to the data[][]
 					for(; i<type.getArgumentCount()-1 && i<size; i++) {
-						data[i] = args.poll().getBytes(GearmanVariables.UTF_8);
+						data[i] = args.poll().getBytes(GearmanSettings.UTF_8);
 					}
 
 					try {
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						for(; i<size; i++) {
-							baos.write(args.poll().getBytes(GearmanVariables.UTF_8));
+							baos.write(args.poll().getBytes(GearmanSettings.UTF_8));
 							if(i<size-1)
 								baos.write(0);
 						}
-						data[data.length-1] = baos.toString().getBytes(GearmanVariables.UTF_8);
+						data[data.length-1] = baos.toString().getBytes(GearmanSettings.UTF_8);
 						baos.close();
 					} catch (Exception e) {
 						// Should not end up here, the baos does not throw
@@ -493,7 +493,7 @@ public class GearmanShell {
 				sb.append("\tArgument ");
 				sb.append(i);
 				sb.append(": ");
-				sb.append(new String(data, GearmanVariables.UTF_8));
+				sb.append(new String(data, GearmanSettings.UTF_8));
 				sb.append(" { ");
 				for(byte b : data) {
 					sb.append(b);

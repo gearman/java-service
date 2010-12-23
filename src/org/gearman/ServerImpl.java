@@ -10,7 +10,7 @@ import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 import org.gearman.util.ConcurrentHashSet;
 
 class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient>{
@@ -57,7 +57,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	@Override
 	public void openPort() throws IOException {
-		this.openPort(GearmanVariables.DEFAULT_PORT);
+		this.openPort(GearmanSettings.DEFAULT_PORT);
 	}
 
 	@Override

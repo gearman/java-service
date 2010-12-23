@@ -6,7 +6,7 @@ import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanConnectionManager;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 
 /**
  * A simple stateless server used to monitor incoming packets. The server does
@@ -18,7 +18,7 @@ public class GearmanPacketLogger {
 	public static void main(String[] args) throws IOException {
 		GearmanConnectionManager gcm = new GearmanConnectionManager();
 		try {
-			gcm.openPort(GearmanVariables.DEFAULT_PORT, new Handler());
+			gcm.openPort(GearmanSettings.DEFAULT_PORT, new Handler());
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			gcm.shutdown();

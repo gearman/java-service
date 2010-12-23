@@ -80,15 +80,17 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		}
 		
 		@Override
-		public void onAccept(final GearmanConnection<Object> conn) {
+		public final void onAccept(final GearmanConnection<Object> conn) {
 			
 			synchronized(this.lock) {
+				final ControllerState oldState = this.state;
 				if(this.state.equals(ControllerState.CONNECTING) && !this.sc.isShutdown) {
 					// Normal execution
 					assert this.conn==null;
 					
 					this.state = ControllerState.OPEN;
 					this.conn = conn;
+					this.onOpen(oldState);
 					
 					if(!this.sc.id.equals(JobServerPoolAbstract.DEFAULT_CLIENT_ID)) {
 						this.conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null, null);
@@ -113,7 +115,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		}
 		
 		@Override
-		public void onDisconnect(final GearmanConnection<Object> conn) {
+		public final void onDisconnect(final GearmanConnection<Object> conn) {
 			synchronized(this.lock) {
 				if(!this.state.equals(ControllerState.OPEN)) return;
 				
@@ -124,7 +126,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		}
 
 		@Override
-		public void onFail(final Throwable exc, final Object attachment) {
+		public final void onFail(final Throwable exc, final Object attachment) {
 			synchronized(this.lock) {
 				assert this.conn==null;
 				
@@ -139,6 +141,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		public final void dropServer() {
 			synchronized(this.lock) {
+				final ControllerState oldState = this.state;
 				if(this.state.equals(ControllerState.DROPPED)) return;
 				
 				this.state = ControllerState.DROPPED;
@@ -154,7 +157,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					}
 				}
 				
-				this.onDropServer();
+				this.onDrop(oldState);
 			}
 		}
 		
@@ -169,7 +172,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		public final void closeServer() {
 			synchronized(this.lock) {
-				
+				ControllerState oldState = this.state;
 				switch(this.state) {
 				case CLOSED:
 				case DROPPED:
@@ -194,6 +197,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					break;
 				}
 				this.state = ControllerState.CLOSED;
+				this.onClose(oldState);
 			}
 		}
 		
@@ -244,6 +248,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				if(this.closer==null) this.closer = new Closer();
 				this.closer.setCallback(callback);
 				
+				final ControllerState oldState = this.state;
 				switch(this.state) {
 				case DROPPED:
 					return;
@@ -261,6 +266,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				
 				this.state = ControllerState.WAITING;
 				sc.getGearman().getPool().schedule(this.closer, waittime, unit);
+				this.onWait(oldState);
 			}
 		}
 		
@@ -293,6 +299,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 */
 		public final boolean openServer(final boolean force) {
 			synchronized(this.lock) {
+				
+				final ControllerState oldState = this.state; 
 				switch(this.state) {
 				case CONNECTING:
 				case OPEN:
@@ -302,7 +310,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					if(!force) return false;
 				case CLOSED:
 					this.state = ControllerState.CONNECTING;
-					this.onOpenServer();
+					this.onConnect(oldState);
 					return true;
 				default:
 					assert false;
@@ -311,13 +319,12 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
-		protected abstract void onOpenServer();
-		protected abstract void onDropServer();
-		
-		/**
-		 * Triggered when the 
-		 */
-		protected abstract void onAddedServer();
+		protected abstract void onConnect(ControllerState oldState);
+		protected abstract void onOpen(ControllerState oldState);
+		protected abstract void onClose(ControllerState oldState);
+		protected abstract void onDrop(ControllerState oldState);
+		protected abstract void onWait(ControllerState oldState);
+		protected abstract void onNew();
 		
 		protected abstract void onLostConnection(GearmanLostConnectionPolicy policy, Grounds grounds);
 		
@@ -341,7 +348,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 	}
-		
+	
 	private final ConcurrentHashMap<Object, X> connMap = new ConcurrentHashMap<Object,X>();
 	private final GearmanLostConnectionPolicy defaultPolicy;
 	private GearmanLostConnectionPolicy policy;;
@@ -360,7 +367,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		final X x = this.createController(srvr);
 		if(this.connMap.putIfAbsent(srvr, x)==null) {
-			x.onAddedServer();
+			x.onNew();
 			return true;
 		} else {
 			return false;
@@ -373,7 +380,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		final X x = this.createController(adrs);
 		if(this.connMap.putIfAbsent(adrs, x)==null) {
-			x.onAddedServer();
+			x.onNew();
 			return true;
 		} else {
 			return false;
@@ -492,9 +499,6 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 	protected GearmanLostConnectionPolicy getDefaultPolicy() {
 		return this.defaultPolicy;
 	}
-	
-	
-	protected abstract void onAddedConnectionControler(X controller);
 	
 	/**
 	 * Creates a new ConnectionControler to add to the JobServerPool<br>

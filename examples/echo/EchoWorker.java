@@ -7,75 +7,58 @@ import org.gearman.Gearman;
 import org.gearman.GearmanFunction;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
-import org.gearman.GearmanLostConnectionPolicy;
-import org.gearman.GearmanServer;
-import org.gearman.GearmanJobServerPool;
 import org.gearman.GearmanWorker;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 
 /**
- * A simple worker implementation that echos Strings.
+ * An echo worker receives a string from a job server an immediately returns it.<br>
+ * <br>
+ * This class has two parts:<br>
+ * <br>
+ * 1) It implements the {@link GearmanFunction} interface to define how to echo a string.<br>
+ * <br>
+ * 2) The main method sets up a {@link GearmanWorker} to use the defined {@link GearmanFunction} to
+ * echo strings. For simplicity, the {@link GearmanWorker} is only set to connect to the localhost.
+ *  
  * @author isaiah
  */
 public class EchoWorker implements GearmanFunction {
 	
 	/**
-	 * Starts a gearman worker that performs the function "echo"
+	 * sets up a {@link GearmanWorker} to use the defined {@link GearmanFunction} to
+	 * echo strings.<br?
 	 * 
 	 * @param args
-	 * 		not applicable
+	 * 		Not applicable. 
 	 * @throws IOException
 	 * 		thrown if an IOException is thrown while creating the Gearman object 
 	 */
 	public static void main(String[] args) throws IOException {
 
 		/*
-		 *  Create a Gearman service provider.
-		 *  
+		 *  Create a Gearman instance
 		 */
 		final Gearman gearman = new Gearman();
 		
 		/*
-		 *  Create a GearmanWorker
+		 *  Create a new GearmanWorker
 		 */
 		final GearmanWorker worker = gearman.createGearmanWorker();
-		
-		worker.setLostConnectionPolicy(new GearmanLostConnectionPolicy() {
-
-			@Override
-			public void lostLocalServer(GearmanServer server, GearmanJobServerPool service, Grounds grounds) {
-				assert false;
-			}
-
-			@Override
-			public Action lostRemoteServer(InetSocketAddress adrs, GearmanJobServerPool service, Grounds grounds) {
-				System.out.println(grounds);
 				
-				gearman.shutdown();
-				return Action.dropServer();
-			}
-			
-		});
+		/*
+		 *  Tell the worker that it can connect to a job server on the localhost listening 
+		 *  on the default port. The address is added to a list
+		 *  
+		 *  See the method "setLostConnectionPolicy(GearmanLostConnectionPolicy)"
+		 *  for information about setting connection failure actions
+		 */
+		worker.addServer(new InetSocketAddress("localhost", GearmanSettings.DEFAULT_PORT));
 		
 		/*
-		 *  This method tells the worker how to perform functions. Here we're telling 
+		 *  Tell the worker how to perform the function "echo" by passing it a
+		 *  GearmanFunction that echos strings
 		 */
 		worker.addFunction("echo", new EchoWorker());
-		
-		// Connect to a Gearman server, no in the local address space, to poll GearmanJobs from 
-		worker.addServer(new InetSocketAddress("localhost", 4730));
-		
-		// Create a shutdown hook for clean exit
-		final Runnable shutdownHook = new Runnable() {
-			@Override
-			public void run() {
-				System.out.println("Shutting Down");
-				gearman.shutdown();
-			}
-		};
-		
-		// Register shutdown hook
-		Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
 	}
 	
 	
@@ -85,12 +68,14 @@ public class EchoWorker implements GearmanFunction {
 	 * @param job
 	 * 		The job sent from the client to be performed by this worker
 	 * @return
-	 * 		The job data sent from the client
+	 * 		The result from executing this function
 	 */
 	@Override
 	public GearmanJobResult work(GearmanJob job) {
+		
 		// Print the string
-		System.out.println(new String(job.getJobData(), GearmanVariables.UTF_8));
+		System.out.println("Echo: "+new String(job.getJobData(), GearmanSettings.UTF_8));
+		
 		// Return data to send back to client
 		return GearmanJobResult.workSuccessful(job.getJobData());
 	}

@@ -9,7 +9,7 @@ package org.gearman;
 import java.util.Arrays;
 
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 import org.gearman.core.GearmanPacket.Magic;
 import org.gearman.core.GearmanPacket.Type;
 import org.gearman.util.ByteArray;
@@ -151,7 +151,7 @@ final class ServerInstructionSet {
 	 * @param client	The client who received the packet
 	 */
 	private final void text_packet(final GearmanPacket packet, final ServerClient client) {
-		final String pkt= new String(packet.toBytes(), GearmanVariables.UTF_8);
+		final String pkt= new String(packet.toBytes(), GearmanSettings.UTF_8);
 		final String[] args = pkt.trim().split("[ \t]");
 		
 		if(args[0].equals("clients")) {
@@ -186,7 +186,7 @@ final class ServerInstructionSet {
 	}
 	
 	private final void text_maxqueue(final String[] args, final ServerClient client) {
-		final byte[] funcName = args[1].getBytes(GearmanVariables.UTF_8);
+		final byte[] funcName = args[1].getBytes(GearmanSettings.UTF_8);
 		if(funcName==null) {
 			client.sendPacket(ServerStaticPackets.TEXT_INCOMPLETE_ARGS, null,null /*TODO*/);
 			return;
@@ -428,7 +428,7 @@ final class ServerInstructionSet {
 		assert clientIdBytes != null;
 		
 		//Convert the worker ID into a String
-		final String clientId = new String(clientIdBytes,GearmanVariables.UTF_8);
+		final String clientId = new String(clientIdBytes,GearmanSettings.UTF_8);
 		
 		//Set the client's client ID
 		client.setClientId(clientId);

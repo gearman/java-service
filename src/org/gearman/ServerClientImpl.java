@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 import org.gearman.util.ByteArray;
 import org.gearman.util.ConcurrentHashSet;
 
@@ -117,7 +117,7 @@ class ServerClientImpl implements ServerClient{
 		sb.append(" : ");
 		
 		for(ServerFunction f : this.funcMap.values()) {
-			sb.append(f.getName().toString(GearmanVariables.UTF_8));
+			sb.append(f.getName().toString(GearmanSettings.UTF_8));
 			sb.append(' ');
 		}
 		

@@ -7,7 +7,7 @@ import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanSettings;
 import org.gearman.core.GearmanPacket.Magic;
 
 abstract class WorkerConnectionController<K> extends ConnectionController<K> {
@@ -116,7 +116,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		try {
 			
 			final byte[] jobHandle = packet.getArgumentData(0);
-			final String name = new String(packet.getArgumentData(1),GearmanVariables.UTF_8);
+			final String name = new String(packet.getArgumentData(1),GearmanSettings.UTF_8);
 			final byte[] jobData = packet.getArgumentData(2);
 			
 			// Get function logic
@@ -187,14 +187,11 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 
 	
 	@Override
-	public void onAccept(final GearmanConnection<Object> conn) {
-		super.onAccept(conn);
-		if(!super.getState().equals(ControllerState.OPEN)) return;
-
+	public void onOpen(ControllerState oldState) {
 		final Set<String> funcSet = this.getWorker().getRegisteredFunctions();
 		this.canDo(funcSet);
 	}
-
+	
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<Object> conn) {
 		
