@@ -149,7 +149,7 @@ public class GearmanConnectionManager {
 
 			@Override
 			public <A> void sendPacket(final GearmanPacket packet, final A attachment, final GearmanCompletionHandler<A> callback) {
-				System.out.println("["+this.getHostAddress()+":"+this.getPort()+"] : OUT :"+packet.getPacketType()); //TODO delete line
+				// TODO System.out.println("["+this.getHostAddress()+":"+this.getPort()+"] : OUT :"+packet.getPacketType()); //TODO delete line
 				
 				final byte[] data = SocketHandlerImpl.this.codec.encode(packet);
 				
@@ -175,7 +175,7 @@ public class GearmanConnectionManager {
 
 			@Override
 			public final void onDecode(final GearmanPacket packet) {
-				System.out.println("["+this.getHostAddress()+":"+this.getPort()+"] : IN : "+packet.getPacketType()); //TODO delete line
+				// TODO System.out.println("["+this.getHostAddress()+":"+this.getPort()+"] : IN : "+packet.getPacketType()); //TODO delete line
 				SocketHandlerImpl.this.handler.onPacketReceived(packet, this);
 			}
 

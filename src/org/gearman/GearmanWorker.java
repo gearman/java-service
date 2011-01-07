@@ -28,7 +28,7 @@ public interface GearmanWorker extends GearmanJobServerPool {
     /**
      * Registers a particular {@link GearmanFunction} with the worker. Once a
      * function has been registered with a worker, the worker is capable of
-     * executing any {@link org.gearman.client.Job} that matches the
+     * executing any {@link org.gearman.JobTask.Job} that matches the
      * registered function. Upon registering a function, the Worker notifies all
      * Gearman Job Servers that is can accept any job that contains the
      * applicable function.

@@ -80,6 +80,8 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		public void onOpen(ControllerState oldState) {
 			if(WorkerImpl.this.funcMap.isEmpty()) {
 				super.closeServer();
+			} else {
+				super.onOpen(oldState);
 			}
 		}
 		
@@ -114,6 +116,15 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 			super(WorkerImpl.this, key);
 		}
 
+		@Override
+		public void onOpen(ControllerState oldState) {
+			if(WorkerImpl.this.funcMap.isEmpty()) {
+				super.closeServer();
+			} else {
+				super.onOpen(oldState);
+			}
+		}
+		
 		@Override
 		protected WorkerDispatcher getDispatcher() {
 			return WorkerImpl.this.dispatcher;
@@ -189,7 +200,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 	private boolean isConnected = false;
 	
 	WorkerImpl(final Gearman gearman) {
-		super(new WorkerLostConnectionPolicy());
+		super(new WorkerLostConnectionPolicy(), 60, TimeUnit.SECONDS);
 		
 		assert gearman!=null;
 		this.gearman = gearman;

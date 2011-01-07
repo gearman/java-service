@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -19,7 +20,6 @@ import org.gearman.core.GearmanPacket;
  * @author isaiah
  */
 abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.ConnectionController<?>> implements GearmanJobServerPool {
-	private static final long DEFAULT_WAIT_PERIOD = 60000000000L; // 60 seconds 
 	private static final String DEFAULT_CLIENT_ID = "-";
 	
 	enum ControllerState {
@@ -62,7 +62,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 */
 		WAITING };
 	
-	abstract static class ConnectionController<K> implements GearmanConnectionHandler<Object>, GearmanFailureHandler<Object> {
+	abstract static class ConnectionController<K> implements GearmanConnectionHandler<Object>, GearmanFailureHandler<Object>, Delayed {
 		private final JobServerPoolAbstract<?> sc;
 		
 		/** The key mapping to this object in the connMap */
@@ -319,6 +319,18 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
+		@Override
+		public long getDelay(TimeUnit unit) {
+			final ScheduledFuture<?> f  = this.future;
+			return f==null? -1: f.getDelay(unit);
+		}
+		
+		@Override
+		public int compareTo(Delayed o) {
+			final ScheduledFuture<?> f  = this.future;
+			return f==null? 0 : f.compareTo(o);
+		}
+		
 		protected abstract void onConnect(ControllerState oldState);
 		protected abstract void onOpen(ControllerState oldState);
 		protected abstract void onClose(ControllerState oldState);
@@ -352,13 +364,14 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 	private final ConcurrentHashMap<Object, X> connMap = new ConcurrentHashMap<Object,X>();
 	private final GearmanLostConnectionPolicy defaultPolicy;
 	private GearmanLostConnectionPolicy policy;;
-	private long waitPeriod = JobServerPoolAbstract.DEFAULT_WAIT_PERIOD;
+	private long waitPeriod;
 	private boolean isShutdown = false;
 	private String id = JobServerPoolAbstract.DEFAULT_CLIENT_ID;
 	
-	JobServerPoolAbstract(GearmanLostConnectionPolicy defaultPolicy) {
+	JobServerPoolAbstract(GearmanLostConnectionPolicy defaultPolicy, long waitPeriod, TimeUnit unit) {
 		this.defaultPolicy = defaultPolicy;
 		this.policy = defaultPolicy;
+		this.waitPeriod = unit.toNanos(waitPeriod);
 	}
 	
 	@Override

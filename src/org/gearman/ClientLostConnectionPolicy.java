@@ -10,6 +10,6 @@ public class ClientLostConnectionPolicy implements GearmanLostConnectionPolicy {
 
 	@Override
 	public Action lostRemoteServer(InetSocketAddress adrs, GearmanJobServerPool service, Grounds grounds) {
-		return null;
+		return Action.reconnectServer();
 	}	
 }

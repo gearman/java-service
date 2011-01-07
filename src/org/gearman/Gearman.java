@@ -53,7 +53,9 @@ public final class Gearman implements GearmanService {
 		return server;
 	}
 	public final GearmanClient createGearmanClient() {
-		return null;
+		final GearmanClient client = new ClientImpl(this);
+		this.services.add(client);
+		return client;
 	}
 	public final GearmanWorker createGearmanWorker() {
 		final GearmanWorker worker = new WorkerImpl(this);

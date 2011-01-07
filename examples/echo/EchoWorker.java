@@ -34,7 +34,7 @@ public class EchoWorker implements GearmanFunction {
 	 * 		thrown if an IOException is thrown while creating the Gearman object 
 	 */
 	public static void main(String[] args) throws IOException {
-
+		
 		/*
 		 *  Create a Gearman instance
 		 */
@@ -60,7 +60,6 @@ public class EchoWorker implements GearmanFunction {
 		 */
 		worker.addFunction("echo", new EchoWorker());
 	}
-	
 	
 	/**
 	 * Echos a string sent from a client

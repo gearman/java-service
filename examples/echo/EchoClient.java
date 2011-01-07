@@ -10,7 +10,7 @@ import org.gearman.GearmanJobResult;
 import org.gearman.core.GearmanSettings;
 
 public class EchoClient {
-	
+
 	public static void main(String[] args) throws IOException {
 		
 		/*
@@ -37,6 +37,7 @@ public class EchoClient {
 		 * Submit a GearmanJob to be executed by a worker who knows how to execute the
 		 * function "echo".
 		 */
+		
 		client.submitJob(new GearmanJob("echo", "Hello World".getBytes(GearmanSettings.UTF_8)) {
 			
 			@Override

@@ -6,7 +6,6 @@ import org.gearman.core.GearmanConnection;
 
 
 public abstract class GearmanJob {
-
 	/**
 	 * Defines the priority of a GearmanJob. The priority defines where in the
 	 * server's job queue this job will reside. Jobs with a high priority will
@@ -18,9 +17,9 @@ public abstract class GearmanJob {
 	 * @author isaiah.v
 	 */
 	public static enum Priority {
-		LOW, NORMAL, HIGH
+		LOW_PRIORITY, NORMAL_PRIORITY, HIGH_PRIORITY
 	}
-
+	
 	/**
 	 * Defines the current state of a GearmanJob.<br>
 	 * <br>
@@ -59,6 +58,8 @@ public abstract class GearmanJob {
 		 */
 		COMPLETED
 	}
+
+
 
 	/** The job's current state */
 	private State state = State.NEW;
@@ -189,7 +190,7 @@ public abstract class GearmanJob {
 	 * 		The data sent to the gearman function to be processed.
 	 */
 	protected GearmanJob(final String function, final byte[] jobData) {
-		this(function, jobData, UUID.randomUUID().toString().getBytes(), Priority.NORMAL);
+		this(function, jobData, UUID.randomUUID().toString().getBytes(), Priority.NORMAL_PRIORITY);
 	}
 
 	/**
@@ -201,10 +202,8 @@ public abstract class GearmanJob {
 	 * @param uniqueID
 	 * 		Specifies the unique ID.
 	 */
-	protected GearmanJob(final String function, final byte[] jobData,
-			final byte[] uniqueID) {
-		this(function, jobData, uniqueID, Priority.NORMAL);
-
+	GearmanJob(final String function, final byte[] jobData, final byte[] uniqueID) {
+		this(function, jobData, uniqueID, Priority.NORMAL_PRIORITY);
 	}
 
 	/**
@@ -218,7 +217,7 @@ public abstract class GearmanJob {
 	 * @param priority
 	 * 		Specifies the jobs priority level
 	 */
-	protected GearmanJob(final String function, final byte[] jobData,
+	GearmanJob(final String function, final byte[] jobData,
 			final byte[] uniqueID, final Priority priority) {
 		if (function == null || jobData == null || uniqueID == null
 				|| priority == null) {

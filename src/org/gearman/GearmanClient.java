@@ -1,7 +1,5 @@
 package org.gearman;
 
-import java.io.IOException;
-
 import org.gearman.core.GearmanCompletionHandler;
 
 /**
@@ -11,34 +9,28 @@ import org.gearman.core.GearmanCompletionHandler;
  * @author isaiah.v
  */
 public interface GearmanClient extends GearmanJobServerPool {
-
+	
 	/**
 	 * Submits a {@link GearmanBackgroundJob} to be executed. Background jobs
 	 * are detached from the client, so no callback information or result will
 	 * be received through the {@link GearmanBackgroundJob} object. However,
 	 * status information can be polled from the server using the
-	 * {@link GearmanBackgroundJob} object.
+	 * {@link GearmanBackgroundJob} object after the.
 	 * 
 	 * @param job
 	 *            The job to be submitted
-	 * @throws IOException
-	 *             Thrown if the job cannot be sent to any of the listed job
-	 *             servers
 	 */
-	public <A> void submitJob(GearmanBackgroundJob job, A att, GearmanCompletionHandler<A> callback);
+	public <A> void submitJob(GearmanBackgroundJob job, A att ,GearmanCompletionHandler<A> callback);
 
 	/**
 	 * Submits a {@link GearmanJob} to be executed.<br>
+	 * If submitting fails, the user will be notified by failing the job.<br>
 	 * 
 	 * @param job
 	 *            The job being submitted
-	 * @throws IOException
-	 *             Thrown if the job cannot be sent to any of the listed job
-	 *             servers
 	 */
-	public <A> void submitJob(GearmanJob job, A att, GearmanCompletionHandler<A> callback);
-	
-	public <A> void submitJob(GearmanJob job);
+	public void submitJob(GearmanJob job);
+	public <A> void submitJob(GearmanJob job, A att ,GearmanCompletionHandler<A> callback);
 
 	/**
 	 * By default the exception callback channel is closed. The client will need
@@ -50,5 +42,7 @@ public interface GearmanClient extends GearmanJobServerPool {
 	 *            set to false the exception callback channel is closed. The
 	 *            default value is false.
 	 */
-	public void setExceptionChannel(boolean isOpen);
+	public void setExceptionChannelOpen(boolean isOpen);
+	
+	public boolean isExceptionChannelOpen();
 }

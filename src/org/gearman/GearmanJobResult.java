@@ -2,8 +2,10 @@ package org.gearman;
 
 public class GearmanJobResult {
 	
-	private static final GearmanJobResult FAIL = new GearmanJobResult(null, ResultStatus.WORKER_FAIL);
-	private static final GearmanJobResult SUCCESS = new GearmanJobResult(null, ResultStatus.SUCCESSFUL);
+	static final GearmanJobResult WORKER_FAIL = new GearmanJobResult(null, ResultStatus.WORKER_FAIL);
+	static final GearmanJobResult CLIENT_FAIL = new GearmanJobResult(null, ResultStatus.SUBMISSION_FAIL);
+	static final GearmanJobResult DISCONNECT_FAIL = new GearmanJobResult(null, ResultStatus.DISCONNECT_FAIL);
+	static final GearmanJobResult SUCCESS = new GearmanJobResult(null, ResultStatus.SUCCESSFUL);
 	
 	public enum ResultStatus {SUCCESSFUL, DISCONNECT_FAIL, SUBMISSION_FAIL, WORKER_FAIL}
 	
@@ -25,7 +27,7 @@ public class GearmanJobResult {
 	}
 	
 	public static final GearmanJobResult workFailed() {
-		return FAIL;
+		return WORKER_FAIL;
 	}
 	
 	public boolean isSuccessful() {
