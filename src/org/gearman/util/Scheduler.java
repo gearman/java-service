@@ -104,14 +104,15 @@ public class Scheduler implements ScheduledExecutorService {
 				Scheduler.this.shutdown();
 			} catch (InterruptedException ie) {
 				// An interrupt implies a shutdown
-			}
+			} finally {
 			
-			// We should only end up here if the scheduler has been shutdown
-			assert Scheduler.this.isShutdown();
-			
-			synchronized(this) {
-				Scheduler.this.thread = null;
-				Scheduler.this.clean();
+				// We should only end up here if the scheduler has been shutdown
+				assert Scheduler.this.isShutdown();
+				
+				synchronized(this) {
+					Scheduler.this.thread = null;
+					Scheduler.this.clean();
+				}
 			}
 			
 		} // shutdown exit point
@@ -272,6 +273,7 @@ public class Scheduler implements ScheduledExecutorService {
 		
 		final RunnableScheduledFuture<?> sf = new ScheduledFutureTask<Object>(command, null, unit.toNanos(initialDelay), unit.toNanos(period) ,ScheduleType.FIXED_RATE);
 		this.queue.add(sf);
+		assert this.queue.contains(sf);
 		
 		this.newEvent();
 		

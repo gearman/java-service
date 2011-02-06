@@ -2,35 +2,120 @@ package org.gearman;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.gearman.GearmanJob.Priority;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
+import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanConstants;
 import org.gearman.util.ByteArray;
 
 abstract class ClientConnectionController <K> extends ConnectionController<K> {
-		
+	
+	private static final int RESPONCE_TIMEOUT = 19000;
+	private static final int IDLE_TIMEOUT = 9000;
+	
 	/**
 	 * The set of executing jobs. The key is the job's handle and the value is the job itself
 	 */
 	private final ConcurrentHashMap<ByteArray, GearmanJob> jobs = new ConcurrentHashMap<ByteArray, GearmanJob>();
-	private ClientJobSubmission<?> pendingJob = null;
+	private ClientJobSubmission pendingJob = null;
+	
+	private long responceTimeout = Long.MAX_VALUE;
+	private long idleTimeout = Long.MAX_VALUE;
 	
 	ClientConnectionController(final ClientImpl client, final K key) {
 		super(client, key);
 	}
 	
-	protected final ClientJobSubmission<?> getPendingJob() {
-		return this.pendingJob;
+	public final void timeoutCheck(long time) {
+		if(time-this.responceTimeout>RESPONCE_TIMEOUT) {
+			super.timeout();
+		} else if(this.jobs.isEmpty() && this.pendingJob==null && time-this.idleTimeout>IDLE_TIMEOUT) {
+			this.closeServer();
+		}
 	}
 	
-	protected final void setPendingJob(final ClientJobSubmission<?> pendingJob) {
-		this.pendingJob = pendingJob;
+	@Override
+	protected void onClose(ControllerState oldState) {
+		this.close();
 	}
 	
-	protected abstract void grab();
+	@Override
+	protected void onDrop(ControllerState oldState) {
+		this.close();
+	}
 	
-	protected abstract ClientJobSubmission<?> grabJob();
+	@Override
+	protected void onWait(ControllerState oldState) {
+		this.close();
+	}
+	
+	private final void close() {
+		if(this.pendingJob!=null) {
+			this.requeueJob(pendingJob);
+			this.pendingJob = null;
+		}
+		
+		for(GearmanJob job : this.jobs.values()) {
+			job.setResult(GearmanJobResult.DISCONNECT_FAIL);
+		}
+		
+		this.responceTimeout = Long.MAX_VALUE;
+		this.idleTimeout = Long.MAX_VALUE;
+	}
+	
+	protected abstract ClientJobSubmission pollNextJob();
+	protected abstract void requeueJob(ClientJobSubmission jobSub);
+	protected abstract Gearman getGearman();
+	
+	protected final void grab() {
+		
+		final ClientJobSubmission jobSub;
+		synchronized(this) {
+			if(this.pendingJob!=null) return;
+			jobSub = this.pollNextJob();
+			
+			if(jobSub!=null) 
+				this.pendingJob = jobSub;
+			else
+				return;
+		}
+		
+		GearmanJob job = jobSub.job;
+		
+		final Priority p = job.getJobPriority();
+		final String funcName = job.getFunctionName();
+		final byte[] uID = job.getUniqueID();
+		final byte[] data = job.getJobData();
+		
+		if(jobSub.isBackground) {
+			switch(p) {
+			case LOW_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW_BG(funcName, uID, data), null, null/*TODO*/);
+				break;
+			case HIGH_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH_BG(funcName, uID, data), null, null/*TODO*/);
+				break;
+			case NORMAL_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_BG(funcName, uID, data), null, null/*TODO*/);
+				break;
+			}
+		} else {
+		
+			switch(p) {
+			case LOW_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW(funcName, uID, data), null, null/*TODO*/);
+				break;
+			case HIGH_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH(funcName, uID, data), null, null/*TODO*/);
+				break;
+			case NORMAL_PRIORITY:
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB(funcName, uID, data), null, null/*TODO*/);
+				break;
+			}
+		}
+	}
 		
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<Object> conn) {
@@ -57,7 +142,8 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 			//TODO
 			break;
 		case WORK_EXCEPTION:
-			workException(packet);
+			//workException(packet);  //TODO Don't implement yet
+			assert false;
 			break;
 		case OPTION_RES:
 			//TODO
@@ -84,7 +170,14 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		
 		final byte[] warning = packet.getArgumentData(1);
 		try {
-			job.callbackWarning(warning);
+			this.getGearman().getPool().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					job.callbackWarning(warning);
+				}
+				
+			});
 		} catch (Throwable t) {
 			// If the user throws an exception, catch it, print it, and continue.
 			t.printStackTrace();
@@ -102,13 +195,21 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		
 		final byte[] data= packet.getArgumentData(1);
 		try {
-			job.callbackData(data);
+			this.getGearman().getPool().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					job.callbackData(data);
+				}
+				
+			});
 		} catch (Throwable t) {
 			// If the user throws an exception, catch it, print it, and continue.
 			t.printStackTrace();
 		}
 	}
-	
+
+/*
 	private final void workException(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
 		final GearmanJob job = this.jobs.get(jobHandle);
@@ -126,10 +227,18 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 			t.printStackTrace();
 		}
 	}
+*/
 	
 	private final void workFail(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJob job = this.jobs.get(jobHandle);
+		
+		/*
+		 * Note: synchronization is not needed here.
+		 */
+		final GearmanJob job = this.jobs.remove(jobHandle);
+		if(this.jobs.isEmpty()) {
+			this.idleTimeout = System.currentTimeMillis();
+		}
 		
 		if(job==null) {
 			// TODO log warning
@@ -137,7 +246,14 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		}
 		
 		try {
-			job.onComplete(GearmanJobResult.WORKER_FAIL);
+			this.getGearman().getPool().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					job.setResult(GearmanJobResult.WORKER_FAIL);
+				}
+				
+			});
 		} catch (Throwable t) {
 			// If the user throws an exception, catch it, print it, and continue.
 			t.printStackTrace();
@@ -145,7 +261,7 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 	}
 	
 	private final void jobCreated(final GearmanPacket packet) {
-		final ClientJobSubmission<?> jobSub;
+		final ClientJobSubmission jobSub;
 		
 		synchronized(this.jobs) {
 			assert this.pendingJob!=null;
@@ -157,8 +273,10 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 			this.pendingJob = null;
 		}
 		
-		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		this.jobs.put(jobHandle, jobSub.job);
+		if(!jobSub.isBackground) {
+			final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
+			this.jobs.put(jobHandle, jobSub.job);
+		}
 		
 		this.grab();
 	}
@@ -173,9 +291,17 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		}
 		
 		try {
-			final long numerator = Long.parseLong(new String(packet.getArgumentData(1),GearmanVariables.UTF_8));
-			final long denominator = Long.parseLong(new String(packet.getArgumentData(2),GearmanVariables.UTF_8));
-			job.status(numerator, denominator);
+			final long numerator = Long.parseLong(new String(packet.getArgumentData(1),GearmanConstants.UTF_8));
+			final long denominator = Long.parseLong(new String(packet.getArgumentData(2),GearmanConstants.UTF_8));
+			
+			this.getGearman().getPool().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					job.callbackStatus(numerator, denominator);
+				}
+				
+			});
 		} catch (NumberFormatException nfe) {
 			// TODO log error
 		}
@@ -183,7 +309,14 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 	
 	private final void workComplete(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJob job = this.jobs.get(jobHandle);
+
+		/*
+		 * Note: synchronization is not needed here.
+		 */
+		final GearmanJob job = this.jobs.remove(jobHandle);
+		if(this.jobs.isEmpty()) {
+			this.idleTimeout = System.currentTimeMillis();
+		}
 		
 		if(job==null) {
 			//TODO log warning
@@ -192,7 +325,14 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		
 		final byte[] data = packet.getArgumentData(1);
 		try {
-			job.onComplete(GearmanJobResult.workSuccessful(data));
+			this.getGearman().getPool().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					job.setResult(GearmanJobResult.workSuccessful(data));
+				}
+				
+			});
 		} catch (Throwable t) {	
 			// If the user throws an exception, catch it, print it, and continue.
 			t.printStackTrace();

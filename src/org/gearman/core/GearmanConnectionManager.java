@@ -86,6 +86,7 @@ public class GearmanConnectionManager {
 
 		@Override
 		public final void onAccept(final Socket<Connection> socket) {
+			
 			try {
 				socket.setTcpNoDelay(true);
 				socket.setKeepAlive(true);
@@ -100,6 +101,7 @@ public class GearmanConnectionManager {
 
 		@Override
 		public final void onDisconnect(final Socket<Connection> socket) {
+			
 			final Connection conn = socket.getAttachment();
 			assert conn!=null;
 			
@@ -109,7 +111,7 @@ public class GearmanConnectionManager {
 		}
 
 		@Override
-		public final void onRead(final Socket<Connection> socket) {
+		public final void onRead(final Socket<Connection> socket) {			
 			assert socket.getAttachment()!=null;
 			this.codec.decode(socket.getAttachment());
 		}

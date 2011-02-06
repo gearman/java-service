@@ -8,7 +8,7 @@ import org.gearman.GearmanFunction;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
 import org.gearman.GearmanWorker;
-import org.gearman.core.GearmanSettings;
+import org.gearman.core.GearmanConstants;
 
 /**
  * An echo worker receives a string from a job server an immediately returns it.<br>
@@ -52,7 +52,7 @@ public class EchoWorker implements GearmanFunction {
 		 *  See the method "setLostConnectionPolicy(GearmanLostConnectionPolicy)"
 		 *  for information about setting connection failure actions
 		 */
-		worker.addServer(new InetSocketAddress("localhost", GearmanSettings.DEFAULT_PORT));
+		worker.addServer(new InetSocketAddress("localhost", GearmanConstants.DEFAULT_PORT));
 		
 		/*
 		 *  Tell the worker how to perform the function "echo" by passing it a
@@ -73,7 +73,7 @@ public class EchoWorker implements GearmanFunction {
 	public GearmanJobResult work(GearmanJob job) {
 		
 		// Print the string
-		System.out.println("Echo: "+new String(job.getJobData(), GearmanSettings.UTF_8));
+		System.out.println("Echo: "+new String(job.getJobData()));
 		
 		// Return data to send back to client
 		return GearmanJobResult.workSuccessful(job.getJobData());

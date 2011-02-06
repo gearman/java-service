@@ -63,7 +63,7 @@ public class EchoWorkerServer {
 		worker.addServer(server);
 		
 		/*
-		 *  Tell the worker how to perform the function "echo" by passing it a
+		 *  Tell the worker how to perform the "echo" function by passing it a
 		 *  GearmanFunction that echos strings
 		 */
 		worker.addFunction("echo", new EchoWorker());

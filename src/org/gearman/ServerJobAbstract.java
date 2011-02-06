@@ -8,7 +8,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanSettings;
+import org.gearman.core.GearmanConstants;
 import org.gearman.core.GearmanPacket.Magic;
 import org.gearman.core.GearmanPacket.Type;
 import org.gearman.util.ByteArray;
@@ -79,7 +79,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 
 	@Override
 	public final GearmanPacket createJobAssignPacket() {
-		return GearmanPacket.createJOB_ASSIGN(jobHandle.getBytes(), this.getFunction().getName().toString(GearmanSettings.UTF_8), data);
+		return GearmanPacket.createJOB_ASSIGN(jobHandle.getBytes(), this.getFunction().getName().toString(GearmanConstants.UTF_8), data);
 	}
 
 	@Override
@@ -291,7 +291,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 	private static final byte[] initJobHandle() {
 		byte[] user;
 		try {
-			user = java.net.InetAddress.getLocalHost().getHostName().getBytes(GearmanSettings.UTF_8);
+			user = java.net.InetAddress.getLocalHost().getHostName().getBytes(GearmanConstants.UTF_8);
 			//user = System.getProperty("user.name").getBytes("UTF-8");
 		} catch (UnknownHostException e) {
 			assert false;
@@ -314,7 +314,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 	 * 		the next available job handle
 	 */
 	private synchronized static final byte[] getNextJobHandle() {
-		final byte[] jobNumber = Long.toString(jobHandleNumber).getBytes(GearmanSettings.UTF_8);
+		final byte[] jobNumber = Long.toString(jobHandleNumber).getBytes(GearmanConstants.UTF_8);
 		
 		final byte[] jobHandle = new byte[jobHandlePrefix.length+jobNumber.length];
 		System.arraycopy(jobHandlePrefix, 0, jobHandle, 0, jobHandlePrefix.length);

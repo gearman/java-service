@@ -2,10 +2,14 @@ package org.gearman;
 
 import java.util.UUID;
 
+import org.gearman.JobServerPoolAbstract.ConnectionController;
+import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanConnection;
+import org.gearman.util.ByteArray;
 
 
 public abstract class GearmanJob {
+	
 	/**
 	 * Defines the priority of a GearmanJob. The priority defines where in the
 	 * server's job queue this job will reside. Jobs with a high priority will
@@ -89,13 +93,13 @@ public abstract class GearmanJob {
 	 * @param jobHandle
 	 * 		The job handle for this specific job
 	 */
-	final void setConnection(final GearmanConnection<?> conn, final byte[] jobHandle) {
+	final void setConnection(final ConnectionController<?> conn, final byte[] jobHandle) {
 		this.state = State.WORKING;
 		this.connInfo = new ConnectionInfo(conn, jobHandle);
 	}
 	
 	final synchronized boolean submit() {
-		 if(!this.state.equals(State.NEW)) return false;
+		 if(!(this.state.equals(State.NEW) || this.state.equals(State.COMPLETED))) return false;
 		 
 		 this.state = State.SUBMITTED;
 		 return true;
@@ -110,7 +114,7 @@ public abstract class GearmanJob {
 	 */
 	final GearmanConnection<?> getConnection() {
 		final ConnectionInfo connInfo = this.connInfo; 
-		return connInfo==null? null: connInfo.connection;
+		return connInfo==null? null: connInfo.connection.getConnection();
 	}
 	
 	/**
@@ -147,7 +151,7 @@ public abstract class GearmanJob {
 	 */
 	public final boolean isConnected() {
 		final ConnectionInfo connInfo = this.connInfo;
-		return connInfo == null ? false : !connInfo.connection.isClosed();
+		return connInfo==null ? false : connInfo.connection.equals(ControllerState.OPEN);
 	}
 
 	/**
@@ -264,7 +268,7 @@ public abstract class GearmanJob {
 	 */
 	public abstract void callbackData(byte[] data);
 
-	/**
+/*	/**
 	 * The exception callback channel. The exception callback channel should be
 	 * used to notify the client of any exceptions. The exception channel is
 	 * closed by default. To open it, specify with the {@link GearmanClient} that
@@ -284,7 +288,7 @@ public abstract class GearmanJob {
 	 * @param data
 	 *            Information to send on the data callback channel
 	 */
-	public abstract void callbackException(byte[] exception);
+//	public abstract void callbackException(byte[] exception);
 
 	/**
 	 * The warning callback channel. This is just like the data callback channel,
@@ -356,8 +360,7 @@ public abstract class GearmanJob {
 	 * 		A number typically specifying the denominator in the fraction work that's
 	 * 		completed
 	 */
-	public void status(long numerator, long denominator) {
-	}
+	public abstract void callbackStatus(long numerator, long denominator);
 
 	/**
 	 * Tests if this job is completed.
@@ -380,15 +383,16 @@ public abstract class GearmanJob {
 	/**
 	 * While in the WORKING state, this method can be used to query the server about the
 	 * job's status.
+	 * @throws InterruptedException 
 	 */
-	public final GearmanJobStatus getStatus() {
-		final GearmanConnection<?> conn = this.getConnection();
-		final byte[] jobHandle = this.getJobHandle();
+	public final GearmanJobStatus getStatus() throws InterruptedException {
 		
-		if(conn==null || jobHandle==null) return null;
+		final ConnectionController<?> cc = this.connInfo.connection;
+		final JobStatus jobStatus = cc.createStatus(new ByteArray(this.connInfo.jobHandle));
 		
-		// TODO get job status
-		return null;
+		jobStatus.join();
+		
+		return jobStatus;
 	}
 	
 	/**
@@ -397,10 +401,10 @@ public abstract class GearmanJob {
 	 * @author isaiah.v
 	 */
 	private static final class ConnectionInfo {
-		public final GearmanConnection<?> connection;
+		public final ConnectionController<?> connection;
 		public final byte[] jobHandle;
 		
-		public ConnectionInfo(final GearmanConnection<?> conn, final byte[] jobHandle) {
+		public ConnectionInfo(final ConnectionController<?> conn, final byte[] jobHandle) {
 			this.connection = conn;
 			this.jobHandle = jobHandle;
 		}

@@ -1,5 +1,6 @@
 package org.gearman;
 
+import org.gearman.JobServerPoolAbstract.ConnectionController;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanPacket.Magic;
@@ -14,7 +15,7 @@ class WorkerJob extends GearmanJob {
 
 	private final static byte[] DEFAULT_UID = new byte[]{0};
 	
-	protected WorkerJob(final String function,final byte[] jobData,final GearmanConnection<?> conn,final byte[] jobHandle) {
+	protected WorkerJob(final String function,final byte[] jobData,final ConnectionController<?> conn,final byte[] jobHandle) {
 		super(function, jobData, DEFAULT_UID);
 		super.setConnection(conn, jobHandle);
 	}
@@ -45,6 +46,7 @@ class WorkerJob extends GearmanJob {
 		conn.sendPacket(GearmanPacket.createWORK_WARNING(Magic.REQ, jobHandle, warning), null ,null /*TODO*/);
 	}
 	
+/*
 	@Override
 	public synchronized final void callbackException(final byte[] exception) {
 		if(this.isComplete()) throw new IllegalStateException("Job has completed");
@@ -55,11 +57,12 @@ class WorkerJob extends GearmanJob {
 		assert conn!=null;
 		assert jobHandle!=null;
 		
-		conn.sendPacket(GearmanPacket.createWORK_EXCEPTION(Magic.REQ, jobHandle, exception),null ,null /*TODO*/);
+		conn.sendPacket(GearmanPacket.createWORK_EXCEPTION(Magic.REQ, jobHandle, exception),null ,null); //TODO
 	}
+*/
 	
 	@Override
-	public void status(long numerator, long denominator) {
+	public void callbackStatus(long numerator, long denominator) {
 		if(this.isComplete()) throw new IllegalStateException("Job has completed");
 		
 		final GearmanConnection<?> conn = super.getConnection();

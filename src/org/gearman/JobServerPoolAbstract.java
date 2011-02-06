@@ -10,11 +10,14 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.gearman.GearmanJobStatus.OperationResult;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
+import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanPacket;
+import org.gearman.util.ByteArray;
 
 /** 
  * @author isaiah
@@ -22,7 +25,7 @@ import org.gearman.core.GearmanPacket;
 abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.ConnectionController<?>> implements GearmanJobServerPool {
 	private static final String DEFAULT_CLIENT_ID = "-";
 	
-	enum ControllerState {
+	public enum ControllerState {
 		
 		/**
 		 * The state specifying the ConnectionController is in the processes of connecting to a server<br>
@@ -60,17 +63,28 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 * <br>
 		 * You can enter this state from the CONNECTING, OPEN, CLOSED, and WAITING states.
 		 */
-		WAITING };
-	
+		WAITING
+	};
+				
+	/**
+	 * Controls connections to job servers.
+	 * 
+	 * @author isaiah
+	 *
+	 * @param <K>
+	 */
 	abstract static class ConnectionController<K> implements GearmanConnectionHandler<Object>, GearmanFailureHandler<Object>, Delayed {
 		private final JobServerPoolAbstract<?> sc;
 		
 		/** The key mapping to this object in the connMap */
 		private final K key;
-		private ControllerState state = ControllerState.CLOSED;
+		private ControllerState userState = ControllerState.CLOSED;
 		private GearmanConnection<?> conn;
 		private ScheduledFuture<?> future;
 		private Closer closer;
+		
+		private ControllerState pjsState = ControllerState.CLOSED;
+		private ConcurrentHashMap<ByteArray, JobStatus> pendingJobStatus; 
 		
 		private final Object lock = new Object();
 		
@@ -83,12 +97,13 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		public final void onAccept(final GearmanConnection<Object> conn) {
 			
 			synchronized(this.lock) {
-				final ControllerState oldState = this.state;
-				if(this.state.equals(ControllerState.CONNECTING) && !this.sc.isShutdown) {
+				final ControllerState oldState = this.userState;
+				if(this.userState.equals(ControllerState.CONNECTING) && !this.sc.isShutdown) {
+					
 					// Normal execution
 					assert this.conn==null;
 					
-					this.state = ControllerState.OPEN;
+					this.userState = ControllerState.OPEN;
 					this.conn = conn;
 					this.onOpen(oldState);
 					
@@ -114,17 +129,20 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
+		private final void userOnAccept() {
+		}
+		
 		@Override
 		public final void onDisconnect(final GearmanConnection<Object> conn) {
 			synchronized(this.lock) {
-				if(!this.state.equals(ControllerState.OPEN)) return;
+				if(!this.userState.equals(ControllerState.OPEN)) return;
 				
 				// If we disconnect from the OPEN state, then we have unexpectedly disconnected
 				this.closeServer();
 				this.onLostConnection(sc.policy, Grounds.UNEXPECTED_DISCONNECT);
 			}
 		}
-
+		
 		@Override
 		public final void onFail(final Throwable exc, final Object attachment) {
 			synchronized(this.lock) {
@@ -141,12 +159,11 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		public final void dropServer() {
 			synchronized(this.lock) {
-				final ControllerState oldState = this.state;
-				if(this.state.equals(ControllerState.DROPPED)) return;
+				final ControllerState oldState = this.userState;
+				if(this.userState.equals(ControllerState.DROPPED)) return;
 				
-				this.state = ControllerState.DROPPED;
+				this.userState = ControllerState.DROPPED;
 				sc.connMap.remove(key);
-				
 				
 				if(this.conn!=null) {
 					try {
@@ -161,9 +178,13 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
-		public final void timeout() {
+		/**
+		 * Tell this ConnectionController that it has had a response timeout and
+		 * should close the connection
+		 */
+		protected final void timeout() {
 			synchronized(this.lock) {
-				if(this.state.equals(ControllerState.OPEN)) {
+				if(this.userState.equals(ControllerState.OPEN)) {
 					this.closeServer();
 					this.onLostConnection(sc.policy, Grounds.RESPONCE_TIMEOUT);
 				}
@@ -172,8 +193,10 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		public final void closeServer() {
 			synchronized(this.lock) {
-				ControllerState oldState = this.state;
-				switch(this.state) {
+				ControllerState oldState = this.userState;
+				this.userState = ControllerState.CLOSED;
+				
+				switch(oldState) {
 				case CLOSED:
 				case DROPPED:
 					return;
@@ -196,7 +219,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				case CONNECTING:
 					break;
 				}
-				this.state = ControllerState.CLOSED;
+				
 				this.onClose(oldState);
 			}
 		}
@@ -248,8 +271,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				if(this.closer==null) this.closer = new Closer();
 				this.closer.setCallback(callback);
 				
-				final ControllerState oldState = this.state;
-				switch(this.state) {
+				final ControllerState oldState = this.userState;
+				switch(this.userState) {
 				case DROPPED:
 					return;
 				case WAITING:
@@ -264,7 +287,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					break;
 				}
 				
-				this.state = ControllerState.WAITING;
+				this.userState = ControllerState.WAITING;
 				sc.getGearman().getPool().schedule(this.closer, waittime, unit);
 				this.onWait(oldState);
 			}
@@ -275,7 +298,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		}
 		
 		public ControllerState getState() {
-			return this.state;
+			return this.userState;
 		}
 		
 		public GearmanConnection<?> getConnection() {
@@ -300,8 +323,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		public final boolean openServer(final boolean force) {
 			synchronized(this.lock) {
 				
-				final ControllerState oldState = this.state; 
-				switch(this.state) {
+				final ControllerState oldState = this.userState; 
+				switch(this.userState) {
 				case CONNECTING:
 				case OPEN:
 				case DROPPED:
@@ -309,7 +332,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				case WAITING:
 					if(!force) return false;
 				case CLOSED:
-					this.state = ControllerState.CONNECTING;
+					this.userState = ControllerState.CONNECTING;
 					this.onConnect(oldState);
 					return true;
 				default:
@@ -338,6 +361,65 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		protected abstract void onWait(ControllerState oldState);
 		protected abstract void onNew();
 		
+		public final JobStatus createStatus(final ByteArray jobHandle) {
+			
+			switch(this.userState) {
+			case CONNECTING:
+			case OPEN:
+			case WAITING:
+			case CLOSED:
+				break;
+			case DROPPED:
+				return null;
+			default:
+				assert false;
+				return null;
+			}
+			
+			if(pendingJobStatus==null)
+				pendingJobStatus=new ConcurrentHashMap<ByteArray, JobStatus>();
+			else {
+				JobStatus js = pendingJobStatus.get(jobHandle);
+				if(js!=null) return js;
+			}
+			
+			assert !pendingJobStatus.containsKey(jobHandle);
+						
+			final JobStatus js = new JobStatus() {
+				
+				@Override
+				protected void onComplete(OperationResult opResult) {
+					if(!opResult.isSuccessful()) {
+						pendingJobStatus.remove(jobHandle);
+					}
+				}
+				
+			};
+			
+			pendingJobStatus.containsKey(jobHandle);
+			assert pendingJobStatus.containsKey(jobHandle);
+			
+			return js;
+		}
+		
+		private final synchronized void sendStatusRequest(final ByteArray jobHandle) {
+			assert this.userState.equals(ControllerState.OPEN);
+			this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), null, new GearmanCompletionHandler<Object>(){
+				@Override
+				public void onComplete(Object attachment) { }
+				
+				@Override
+				public void onFail(Throwable exc, Object attachment) {
+					final JobStatus js = pendingJobStatus.remove(jobHandle);
+					if(js!=null) js.complete(OperationResult.OPERATION_REQUEST_FAILED, false, false, 0, 0);
+				}
+			});			
+		}
+		
+		public final JobStatus removeStatus(final ByteArray jobHandle) {
+			return pendingJobStatus==null? null: pendingJobStatus.remove(jobHandle);
+		}
+		
 		protected abstract void onLostConnection(GearmanLostConnectionPolicy policy, Grounds grounds);
 		
 		private final class Closer implements Runnable {
@@ -346,8 +428,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			@Override
 			public void run() {
 				synchronized(ConnectionController.this.lock) {
-					if(ConnectionController.this.state.equals(ControllerState.WAITING) && !Thread.currentThread().isInterrupted()) {
-						ConnectionController.this.state = ControllerState.CLOSED;
+					if(ConnectionController.this.userState.equals(ControllerState.WAITING) && !Thread.currentThread().isInterrupted()) {
+						ConnectionController.this.userState = ControllerState.CLOSED;
 						if(this.callback!=null) this.callback.run();
 						
 						ConnectionController.this.future=null;
@@ -359,6 +441,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				this.callback = callback;
 			}
 		}
+		
 	}
 	
 	private final ConcurrentHashMap<Object, X> connMap = new ConcurrentHashMap<Object,X>();

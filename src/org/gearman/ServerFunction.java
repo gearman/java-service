@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.gearman.ServerJob.JobPriority;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanSettings;
+import org.gearman.core.GearmanConstants;
 import org.gearman.util.ByteArray;
 import org.gearman.util.EqualsLock;
 
@@ -49,7 +49,7 @@ class ServerFunction {
 	
 	public final GearmanPacket getStatus() {
 		StringBuilder sb = new StringBuilder();
-		sb.append(this.name.toString(GearmanSettings.UTF_8)); sb.append('\t');
+		sb.append(this.name.toString(GearmanConstants.UTF_8)); sb.append('\t');
 		sb.append(this.jobSet.size()); sb.append('\t');
 		sb.append(this.jobSet.size()-this.queue.size());sb.append('\t');
 		sb.append(this.workers.size());sb.append('\n');

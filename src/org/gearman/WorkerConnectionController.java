@@ -7,7 +7,7 @@ import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
-import org.gearman.core.GearmanSettings;
+import org.gearman.core.GearmanConstants;
 import org.gearman.core.GearmanPacket.Magic;
 
 abstract class WorkerConnectionController<K> extends ConnectionController<K> {
@@ -116,7 +116,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		try {
 			
 			final byte[] jobHandle = packet.getArgumentData(0);
-			final String name = new String(packet.getArgumentData(1),GearmanSettings.UTF_8);
+			final String name = new String(packet.getArgumentData(1),GearmanConstants.UTF_8);
 			final byte[] jobData = packet.getArgumentData(2);
 			
 			// Get function logic
@@ -133,7 +133,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 			}
 						
 			// Create job for function
-			final GearmanJob job = new WorkerJob(name, jobData,conn,jobHandle);
+			final GearmanJob job = new WorkerJob(name, jobData,this,jobHandle);
 			
 			// Run function
 			try {

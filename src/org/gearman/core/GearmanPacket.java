@@ -46,7 +46,7 @@ public final class GearmanPacket {
 	 * 		A GearmanPacket representing the given text packet
 	 */
 	public static final GearmanPacket createTEXT(final String packet) {
-		return new GearmanPacket(Magic.REQ, Type.TEXT, packet.getBytes(GearmanSettings.UTF_8));
+		return new GearmanPacket(Magic.REQ, Type.TEXT, packet.getBytes(GearmanConstants.UTF_8));
 	}
 	
 	public static final GearmanPacket createECHO_REQ(final byte[] data) {
@@ -67,7 +67,7 @@ public final class GearmanPacket {
 	 * 		A CAN_DO GearmanPacket
 	 */
 	public static final GearmanPacket createCAN_DO(final String funcName) {
-		return new GearmanPacket(Magic.REQ, Type.CAN_DO, funcName.getBytes(GearmanSettings.UTF_8));
+		return new GearmanPacket(Magic.REQ, Type.CAN_DO, funcName.getBytes(GearmanConstants.UTF_8));
 	}
 	
 	/**
@@ -82,7 +82,7 @@ public final class GearmanPacket {
 	 * 		A CANT_DO GearmanPacket
 	 */
 	public static final GearmanPacket createCANT_DO(final String funcName) {
-		return new GearmanPacket(Magic.REQ, Type.CANT_DO, funcName.getBytes(GearmanSettings.UTF_8));
+		return new GearmanPacket(Magic.REQ, Type.CANT_DO, funcName.getBytes(GearmanConstants.UTF_8));
 	}
 	
 	/**
@@ -105,7 +105,22 @@ public final class GearmanPacket {
 		return GearmanPacket.NOOP;
 	}
 	public static final GearmanPacket createSUBMIT_JOB(final String funcName, final byte[] uID, final byte[] data) {
-		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB, funcName.getBytes(GearmanSettings.UTF_8), uID, data);
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
+	}
+	public static final GearmanPacket createSUBMIT_JOB_BG(final String funcName, final byte[] uID, final byte[] data) {
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
+	}
+	public static final GearmanPacket createSUBMIT_JOB_HIGH(final String funcName, final byte[] uID, final byte[] data) {
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_HIGH, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
+	}
+	public static final GearmanPacket createSUBMIT_JOB_HIGH_BG(final String funcName, final byte[] uID, final byte[] data) {
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_HIGH_BG, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
+	}
+	public static final GearmanPacket createSUBMIT_JOB_LOW(final String funcName, final byte[] uID, final byte[] data) {
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_LOW, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
+	}
+	public static final GearmanPacket createSUBMIT_JOB_LOW_BG(final String funcName, final byte[] uID, final byte[] data) {
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_LOW_BG, funcName.getBytes(GearmanConstants.UTF_8), uID, data);
 	}
 	public static final GearmanPacket createGRAB_JOB() {
 		return GearmanPacket.GRAB_JOB;
@@ -123,8 +138,8 @@ public final class GearmanPacket {
 		return new GearmanPacket(magic, Type.WORK_WARNING, jobHandle, data);
 	}
 	public static final GearmanPacket createWORK_STATUS(final Magic magic, final byte[] jobHandle, final long numerator, final long denominator) {
-		final byte[] num = Long.toString(numerator).getBytes(GearmanSettings.UTF_8);
-		final byte[] den = Long.toString(denominator).getBytes(GearmanSettings.UTF_8);
+		final byte[] num = Long.toString(numerator).getBytes(GearmanConstants.UTF_8);
+		final byte[] den = Long.toString(denominator).getBytes(GearmanConstants.UTF_8);
 		
 		return new GearmanPacket(magic, Type.WORK_STATUS, jobHandle, num, den);
 	}
@@ -132,16 +147,20 @@ public final class GearmanPacket {
 		return new GearmanPacket(magic, Type.WORK_EXCEPTION, jobHandle, data);
 	}
 	public static final GearmanPacket createSET_CLIENT_ID(String id) {
-		return new GearmanPacket(Magic.REQ, Type.SET_CLIENT_ID, id.getBytes(GearmanSettings.UTF_8));
+		return new GearmanPacket(Magic.REQ, Type.SET_CLIENT_ID, id.getBytes(GearmanConstants.UTF_8));
 	}
 	public static final GearmanPacket createCAN_DO_TIMEOUT(final String funcName, final long timeout) {
 		// TODO not sure if this is right... For the timeout value, is the server expecting
 		// a binary number or a string representation???
-		return new GearmanPacket(Magic.REQ, Type.CAN_DO_TIMEOUT, funcName.getBytes(GearmanSettings.UTF_8), Long.toString(timeout).getBytes(GearmanSettings.UTF_8));
+		return new GearmanPacket(Magic.REQ, Type.CAN_DO_TIMEOUT, funcName.getBytes(GearmanConstants.UTF_8), Long.toString(timeout).getBytes(GearmanConstants.UTF_8));
 	}
 	
 	public static final GearmanPacket createJOB_ASSIGN(final byte[] jobHandle, final String funcName, final byte[] data) {
-		return new GearmanPacket(Magic.RES, Type.JOB_ASSIGN, jobHandle, funcName.getBytes(GearmanSettings.UTF_8), data);
+		return new GearmanPacket(Magic.RES, Type.JOB_ASSIGN, jobHandle, funcName.getBytes(GearmanConstants.UTF_8), data);
+	}
+	
+	public static final GearmanPacket createGET_STATUS(final byte[] jobHandle) {
+		return new GearmanPacket(Magic.REQ, Type.GET_STATUS, jobHandle);
 	}
 	
 	private static final int HEADER_SIZE = 12;
@@ -153,8 +172,12 @@ public final class GearmanPacket {
     public GearmanPacket(final Magic magic, final Type type , byte[]...arguments) {
     	this.magic = magic;
     	this.type = type;
-    	
+
     	this.arguments = arguments==null? new byte[0][]: arguments;
+    	
+    	for(int i=0; i<arguments.length; i++) {
+    		if(arguments[i]==null) arguments[i] = new byte[0];
+    	}
     	
     	if(this.arguments.length!=type.getArgumentCount()) {
     		throw new IllegalArgumentException("Packet type " + type + " requires " + type.getArgumentCount() + " argument(s). Aquired " + this.arguments.length + " argument(s)");

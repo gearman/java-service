@@ -7,7 +7,9 @@ import org.gearman.Gearman;
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
-import org.gearman.core.GearmanSettings;
+import org.gearman.GearmanClient.SubmitHandler;
+import org.gearman.GearmanClient.SubmitResult;
+import org.gearman.core.GearmanConstants;
 
 public class EchoClient {
 
@@ -31,14 +33,44 @@ public class EchoClient {
 `		 * See the method "setLostConnectionPolicy(GearmanLostConnectionPolicy)"
 		 * for information about setting connection failure actions
 		 */
-		client.addServer(new InetSocketAddress("localhost",GearmanSettings.DEFAULT_PORT));
+		client.addServer(new InetSocketAddress("localhost",GearmanConstants.DEFAULT_PORT));
+		
 		
 		/*
-		 * Submit a GearmanJob to be executed by a worker who knows how to execute the
-		 * function "echo".
+		 * Define an asynchronous callback handler. The callback handler will tell the user if the
+		 * job was successfully submitted to a job server or if it failed
 		 */
+		final SubmitHandler handler = new SubmitHandler() {
+			@Override
+			public void onSubmissionComplete(GearmanJob job, SubmitResult result) {
+				
+				// If the job was successfully submitted, then we just return
+				if(result.isSuccessful()) return;
+				
+				/*
+				 *  If the job failed to submit, print an error and close the gearman
+				 *  instance, and allow the application to shutdown
+				 */
+				System.err.println("job submission failed: "+result);
+				gearman.shutdown();
+			}
+		};
 		
-		client.submitJob(new GearmanJob("echo", "Hello World".getBytes(GearmanSettings.UTF_8)) {
+		/*
+		 * Define a GearmanJob to be executed by a GearmanWorker.
+		 */
+		final GearmanJob job = new GearmanJob("echo", "Hello World".getBytes()) {
+
+			@Override
+			public void callbackStatus(long numerator, long denominator) {
+				/*
+				 * This method is used to send status updates from the worker to the
+				 * client while the job is executing
+				 */
+				
+				// No information about the job's status is sent in the echo function 
+				assert false;
+			}
 			
 			@Override
 			public void callbackData(byte[] data) {
@@ -48,20 +80,6 @@ public class EchoClient {
 				 */
 				
 				// No data sent on the data callback channel in the echo function
-				assert false;
-			}
-			
-			@Override
-			public void callbackException(byte[] exception) {
-				/*
-				 *  This method is used to send exception information from the worker to the
-				 *  client while the job is executing.
-				 *  
-				 *  By default, the exception callback channel is closed. To open, call
-				 *  client.setExceptionChannel(true);
-				 */
-				
-				// No data sent on the exception callback channel in the echo function
 				assert false;
 			}
 			
@@ -83,16 +101,22 @@ public class EchoClient {
 				// If the job was successful
 				if(result.isSuccessful()) {
 					// If the job was successful, print the returned string
-					System.out.println(new String(result.getResultData(),GearmanSettings.UTF_8));
+					System.out.println(new String(result.getResultData(),GearmanConstants.UTF_8));
 				} else {
 					// If the job failed, print that it failed.  A job may fail for a few resins,
-					// but the most likely would be due failing to send it to a job server
-					System.out.println("job failed");
+					// but the most likely would be due to failing to send this job to a job server
+					System.err.println("Job execution failed");
 				}
 				
 				// We're done, shutdown
 				gearman.shutdown();
 			}
-		});
-	}
+		};
+		
+		/*
+		 * Submit the GearmanJob
+		 */
+		client.submitJob(job, handler);
+		
+	} // exit main thread
 }

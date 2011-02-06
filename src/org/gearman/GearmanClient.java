@@ -1,7 +1,5 @@
 package org.gearman;
 
-import org.gearman.core.GearmanCompletionHandler;
-
 /**
  * A GearmanCliet submits {@link GearmanJob}s and {@link GearmanBackgroundJob}s
  * to gearman job servers
@@ -11,38 +9,47 @@ import org.gearman.core.GearmanCompletionHandler;
 public interface GearmanClient extends GearmanJobServerPool {
 	
 	/**
-	 * Submits a {@link GearmanBackgroundJob} to be executed. Background jobs
-	 * are detached from the client, so no callback information or result will
-	 * be received through the {@link GearmanBackgroundJob} object. However,
-	 * status information can be polled from the server using the
-	 * {@link GearmanBackgroundJob} object after the.
 	 * 
-	 * @param job
-	 *            The job to be submitted
+	 * @author isaiah
+	 *
 	 */
-	public <A> void submitJob(GearmanBackgroundJob job, A att ,GearmanCompletionHandler<A> callback);
-
-	/**
-	 * Submits a {@link GearmanJob} to be executed.<br>
-	 * If submitting fails, the user will be notified by failing the job.<br>
-	 * 
-	 * @param job
-	 *            The job being submitted
-	 */
-	public void submitJob(GearmanJob job);
-	public <A> void submitJob(GearmanJob job, A att ,GearmanCompletionHandler<A> callback);
-
-	/**
-	 * By default the exception callback channel is closed. The client will need
-	 * to communicate to job servers that exceptions should be forwarded to the
-	 * client.
-	 * 
-	 * @param isOpen
-	 *            If set to true, the exception callback channel is opened. If
-	 *            set to false the exception callback channel is closed. The
-	 *            default value is false.
-	 */
-	public void setExceptionChannelOpen(boolean isOpen);
+	public static enum SubmitResult {
+		
+		/**
+		 * The job was sucessfuly submitted to a job server 
+		 */
+		SUBMIT_SUCCESSFUL,
+		
+		/**
+		 * Failed to send the job due to there being no job servers to
+		 * submit to.
+		 */
+		FAILED_TO_NO_SERVER,
+		
+		/**
+		 * 
+		 */
+		FAILED_TO_CONNECT,
+		
+		/**
+		 * The job has already been submitted to a client and has not yet completed 
+		 */
+		FAILED_TO_INVALID_JOB_STATE,
+		
+		/**
+		 * The {@link GearmanClient} is shutdown
+		 */
+		FAILED_TO_SHUTDOWN;
+				
+		public boolean isSuccessful() {
+			return this==SUBMIT_SUCCESSFUL;
+		}
+		
+	}
 	
-	public boolean isExceptionChannelOpen();
+	public static interface SubmitHandler {
+		public void onSubmissionComplete(GearmanJob job, SubmitResult result);
+	}
+	
+	public void submitJob(GearmanJob job, SubmitHandler callback);
 }
