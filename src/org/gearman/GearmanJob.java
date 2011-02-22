@@ -1,6 +1,7 @@
 package org.gearman;
 
 import java.util.UUID;
+import java.util.concurrent.Future;
 
 import org.gearman.JobServerPoolAbstract.ConnectionController;
 import org.gearman.JobServerPoolAbstract.ControllerState;
@@ -221,10 +222,8 @@ public abstract class GearmanJob {
 	 * @param priority
 	 * 		Specifies the jobs priority level
 	 */
-	GearmanJob(final String function, final byte[] jobData,
-			final byte[] uniqueID, final Priority priority) {
-		if (function == null || jobData == null || uniqueID == null
-				|| priority == null) {
+	GearmanJob(final String function, final byte[] jobData, final byte[] uniqueID, final Priority priority) {
+		if (function == null || jobData == null || uniqueID == null || priority == null) {
 			throw new IllegalArgumentException("Paramiter equals null");
 		}
 
@@ -381,17 +380,17 @@ public abstract class GearmanJob {
 	}
 	
 	/**
-	 * While in the WORKING state, this method can be used to query the server about the
-	 * job's status.
-	 * @throws InterruptedException 
+	 * Queries the job server about this job's status. 
 	 */
-	public final GearmanJobStatus getStatus() throws InterruptedException {
+	public final Future<GearmanJobStatus> getStatus() {
 		
+		// Get the connection controller that is handling this server
 		final ConnectionController<?> cc = this.connInfo.connection;
-		final JobStatus jobStatus = cc.createStatus(new ByteArray(this.connInfo.jobHandle));
 		
-		jobStatus.join();
+		// Get the controller get the status. This method returns a GearmanJobStatus/Future object 
+		final JobStatus jobStatus = cc.getStatus(new ByteArray(this.connInfo.jobHandle));
 		
+		// return the job status as a Future object
 		return jobStatus;
 	}
 	

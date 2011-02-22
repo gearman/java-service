@@ -223,7 +223,7 @@ public class GearmanConnectionManager {
 		public void run() {
 			if(handler!=null)handler.onComplete(att);
 		}
-
+	
 		@Override
 		public void onException(Z exception) {
 			if(handler!=null)handler.onFail(exception, att);

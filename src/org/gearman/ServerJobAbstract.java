@@ -175,13 +175,15 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		ServerJobAbstract.globalJobs.remove(this.jobHandle);
 		
 		for(ServerClient client : this.clients) {
-			client.removeDisconnectListener(this);
+			boolean t = client.removeDisconnectListener(this);
+			assert t;
 			client.sendPacket(packet,null,null /*TODO*/);
 		}
 		this.clients.clear();
 		
 		if(this.worker!=null) {
-			this.worker.removeDisconnectListener(this);
+			boolean t = this.worker.removeDisconnectListener(this);
+			assert t;
 			this.worker = null;
 		}
 	}
@@ -231,6 +233,8 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		this.worker = worker;
 		this.state = JobState.WORKING;
 		
+		worker.addDisconnectListener(this);
+		
 		worker.sendPacket(this.createJobAssignPacket(), null, new GearmanCompletionHandler<Object>(){
 			@Override
 			public void onComplete(Object attachment) {}
@@ -239,8 +243,6 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 				ServerJobAbstract.this.queue();
 			}
 		});
-		
-		worker.addDisconnectListener(this);
 	}
 	
 	protected final void workUniqueID(final ServerClient worker) {

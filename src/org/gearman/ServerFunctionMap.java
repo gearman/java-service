@@ -26,7 +26,7 @@ class ServerFunctionMap {
 				func.ref = ref2;
 				
 				final Object o = this.funcMap.put(name, ref2);
-				assert o.equals(ref);
+				assert o==null;
 			}
 			return func;
 		} finally {

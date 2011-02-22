@@ -62,9 +62,11 @@ class ServerFunction {
 		final Integer key = uniqueID.hashCode(); 
 		this.lock.lock(key);
 		try {
+			
 			// Make sure only one thread attempts to add a job with this uID at once
 			
 			if(this.jobSet.containsKey(uniqueID)) {
+				
 				final Job job = this.jobSet.get(uniqueID);
 				assert job!=null;
 				
@@ -101,15 +103,28 @@ class ServerFunction {
 				job = new Job(uniqueID, data, priority, creator);	
 				this.jobSet.put(uniqueID, job);		// add job to local job set
 			}
-			this.queue.add(job);
 			
+			
+			/* 
+			 * The JOB_CREATED packet must execute before the job is added to the queue.
+			 * Queuing the job before sending the packet may result in another thread
+			 * grabbing, completing and sending a WORK_COMPLETE packet before the
+			 * JOB_CREATED is sent 
+			 */
 			if(creator!=null) {
 				creator.sendPacket(job.createJobCreatedPacket(), null ,null /*TODO*/);
 			}
 			
+			/*
+			 * The job must be queued before sending the NOOP packets. Sending the noops
+			 * first may result in a worker failing to grab the job 
+			 */
+			this.queue.add(job);
+			
 			for(ServerClient noop : workers) {
 				noop.noop();
 			}
+			
 		} finally {
 			// Always unlock lock
 			this.lock.unlock(key);
@@ -117,8 +132,14 @@ class ServerFunction {
 	}
 	
 	public final boolean grabJob(final ServerClient worker) {
-		final Job job = this.queue.poll();
-		if(job==null) return false;
+		
+		final Job job;
+
+			job = this.queue.poll();
+		
+		if(job==null) {
+			return false;
+		}
 		
 		job.work(worker);
 		return true;

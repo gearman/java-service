@@ -32,6 +32,12 @@ class ServerClientImpl implements ServerClient{
 		this.conn = conn;
 	}
 	
+	@SuppressWarnings("unused")
+	private final void DBG_printListenersSize() {
+		/* Debug Method */
+		System.out.println(disconnectListeners.size());
+	}
+	
 	@Override
 	public boolean addDisconnectListener(ServerClientDisconnectListener listener) {
 		assert listener!=null;

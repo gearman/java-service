@@ -5,7 +5,7 @@ package org.gearman;
  */
 class ClientConnectionList <V, K> {
 	private final class Node {
-		private Node last = null;
+		private Node prev = null;
 		private Node next = null;
 		
 		private K failKey;
@@ -18,6 +18,29 @@ class ClientConnectionList <V, K> {
 	
 	private Node head = null;
 	private Node tail = null;
+	
+	public final synchronized boolean contains(final V value) {
+		Node n = this.head;
+		while(n!=null) {
+			if(n.value.equals(value)) return true;
+			n = n.next;
+		}
+		return false;		
+	}
+	
+	public final synchronized boolean hasFailKeys() {
+		
+		Node n = head;
+		while(n != null) {
+			if(n.failKey!=null) {
+				return true;
+			} else {
+				n=n.next;
+			}
+		}
+			
+		return false;
+	}
 	
 	public final synchronized boolean add(final V value) {
 		final Node node = new Node(value);
@@ -34,7 +57,7 @@ class ClientConnectionList <V, K> {
 			assert tail!=null;
 			assert tail.next==null;
 			
-			node.last = tail;
+			node.prev = tail;
 			tail.next = node;
 			tail = node;
 		}
@@ -51,10 +74,10 @@ class ClientConnectionList <V, K> {
 			this.tail = node;
 			
 		} else {
-			assert head.last==null;
+			assert head.prev==null;
 			
 			node.next = this.head;
-			this.head.last = node;
+			this.head.prev = node;
 			this.head = node;
 		}
 		return true;
@@ -67,17 +90,17 @@ class ClientConnectionList <V, K> {
 			if(!n.value.equals(value)) continue;
 			
 			if(n.next!=null) {
-				n.next.last = n.last;
+				n.next.prev = n.prev;
 			} else {
 				assert n==this.tail;
-				this.tail = n.last;
+				this.tail = n.prev;
 			}
 			
-			if(n.last!=null) {
-				n.last.next = n.next;
+			if(n.prev!=null) {
+				n.prev.next = n.next;
 				
 				if(n.failKey!=null)
-					n.last.failKey = n.failKey;
+					n.prev.failKey = n.failKey;
 				
 				return null;		// removed value, fail key moved back 
 			} else {
@@ -95,7 +118,7 @@ class ClientConnectionList <V, K> {
 		if (this.head==null || this.tail==null) return null;
 		
 		this.tail.failKey = failKey;
-		return tail.value;
+		return head.value;
 	}
 	
 	public final synchronized V peek() {
@@ -104,13 +127,13 @@ class ClientConnectionList <V, K> {
 	
 	public final synchronized K removeFirst() {
 		if(this.head==null) return null;
-		assert this.head.last == null;
+		assert this.head.prev == null;
 		
 		final K failKey = head.failKey;
 		
 		this.head = this.head.next;
 		if(this.head!=null)
-			this.head.last = null;
+			this.head.prev = null;
 		
 		return failKey;		
 	}

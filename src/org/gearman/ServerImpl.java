@@ -92,7 +92,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		conn.setAttachment(client);
 		this.clients.add(client);
 	}
-
+	
 	@Override
 	public void onDisconnect(GearmanConnection<ServerClient> conn) {
 		conn.getAttachment().close();
@@ -100,7 +100,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		final boolean b = this.clients.remove(conn.getAttachment());
 		assert b;
 	}
-
+	
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<ServerClient> conn) {
 		
@@ -205,5 +205,11 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		public boolean isClosed() {
 			return this.isClosed;
 		}
+	}
+	
+	
+	@SuppressWarnings("unused")
+	private final void DBG_printClientSize() {
+		System.out.println(this.clients.size());
 	}
 }

@@ -2,9 +2,9 @@ package org.gearman;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.gearman.GearmanClient.SubmitResult;
 import org.gearman.GearmanJob.Priority;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
-import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
@@ -36,22 +36,7 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		}
 	}
 	
-	@Override
-	protected void onClose(ControllerState oldState) {
-		this.close();
-	}
-	
-	@Override
-	protected void onDrop(ControllerState oldState) {
-		this.close();
-	}
-	
-	@Override
-	protected void onWait(ControllerState oldState) {
-		this.close();
-	}
-	
-	private final void close() {
+	protected final void close() {
 		if(this.pendingJob!=null) {
 			this.requeueJob(pendingJob);
 			this.pendingJob = null;
@@ -69,17 +54,17 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 	protected abstract void requeueJob(ClientJobSubmission jobSub);
 	protected abstract Gearman getGearman();
 	
-	protected final void grab() {
+	protected final boolean grab() {
 		
 		final ClientJobSubmission jobSub;
 		synchronized(this) {
-			if(this.pendingJob!=null) return;
+			if(this.pendingJob!=null) return false;
 			jobSub = this.pollNextJob();
 			
 			if(jobSub!=null) 
 				this.pendingJob = jobSub;
 			else
-				return;
+				return false;
 		}
 		
 		GearmanJob job = jobSub.job;
@@ -115,6 +100,8 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 				break;
 			}
 		}
+		
+		return true;
 	}
 		
 	@Override
@@ -272,6 +259,8 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 			
 			this.pendingJob = null;
 		}
+		
+		jobSub.onSubmissionComplete(SubmitResult.SUBMIT_SUCCESSFUL);
 		
 		if(!jobSub.isBackground) {
 			final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
