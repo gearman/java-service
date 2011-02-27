@@ -9,11 +9,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.gearman.GearmanLostConnectionPolicy.Action;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
+import org.gearman.core.GearmanCallbackHandler;
+import org.gearman.core.GearmanCallbackResult;
 
-class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionController<?>> implements GearmanClient {
+class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionController<?,?>> implements GearmanClient {
 
 	
-	protected class InnerConnectionController<K> extends ClientConnectionController<K> {
+	protected class InnerConnectionController<K, C extends GearmanCallbackResult> extends ClientConnectionController<K,C> {
 		
 		InnerConnectionController(K key) {
 			super(ClientImpl.this, key);
@@ -76,7 +78,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		}
 	}
 	
-	private final class LocalConnectionController extends InnerConnectionController<GearmanServer> {
+	private final class LocalConnectionController extends InnerConnectionController<GearmanServer, org.gearman.GearmanServer.ConnectCallbackResult> {
 		
 		LocalConnectionController(GearmanServer key) {
 			super(key);
@@ -106,11 +108,11 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			 * Open a new local connection. This connection controller is both
 			 * the GearmanConnectionHandler and GearmanFailureHandler
 			 */
-			super.getKey().createGearmanConnection(this, null, this);
+			super.getKey().createGearmanConnection(this, this);
 		}
 	}
 	
-	private final class RemoteConnectionController extends InnerConnectionController<InetSocketAddress> implements Runnable{
+	private final class RemoteConnectionController extends InnerConnectionController<InetSocketAddress, org.gearman.core.GearmanConnectionManager.ConnectCallbackResult> implements Runnable{
 		RemoteConnectionController(InetSocketAddress key) {
 			super(key);
 		}
@@ -175,7 +177,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			 * Open a new remote connection. This connection controller is both
 			 * the GearmanConnectionHandler and GearmanFailureHandler
 			 */
-			ClientImpl.this.gearman.getGearmanConnectionManager().createGearmanConnection(super.getKey(), this, null, this);
+			ClientImpl.this.gearman.getGearmanConnectionManager().createGearmanConnection(super.getKey(), this, this);
 		}
 
 		@Override
@@ -188,10 +190,10 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	private final Gearman gearman;
 	
 	/** The set of open connections */ 
-	private final Queue<InnerConnectionController<?>> open = new LinkedBlockingQueue<InnerConnectionController<?>>();
+	private final Queue<InnerConnectionController<?,?>> open = new LinkedBlockingQueue<InnerConnectionController<?,?>>();
 	
 	/** The set of available connections*/
-	private final ClientConnectionList<InnerConnectionController<?>, ClientJobSubmission> available = new ClientConnectionList<InnerConnectionController<?>, ClientJobSubmission>();
+	private final ClientConnectionList<InnerConnectionController<?,?>, ClientJobSubmission> available = new ClientConnectionList<InnerConnectionController<?,?>, ClientJobSubmission>();
 	
 	/** The set of jobs waiting to be submitted */
 	private final Deque<ClientJobSubmission> jobQueue = new LinkedBlockingDeque<ClientJobSubmission>(); 
@@ -206,28 +208,28 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	}
 
 	@Override
-	protected InnerConnectionController<?> createController(GearmanServer key) {
+	protected InnerConnectionController<?,?> createController(GearmanServer key) {
 		return new LocalConnectionController(key);
 	}
 
 	@Override
-	protected InnerConnectionController<?> createController(InetSocketAddress key) {
+	protected InnerConnectionController<?,?> createController(InetSocketAddress key) {
 		return new RemoteConnectionController(key);
 	}
 
 	@Override
-	public void submitJob(GearmanJob job, SubmitHandler callback) {
+	public void submitJob(GearmanJob job, GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback) {
 		if(this.isShutdown()) {
 			if(callback!=null)
-				callback.onSubmissionComplete(job,SubmitResult.FAILED_TO_SHUTDOWN);
+				callback.onComplete(job,SubmitCallbackResult.FAILED_TO_SHUTDOWN);
 			return;
 		} else if(!job.submit()) {
 			if(callback!=null) 
-				callback.onSubmissionComplete(job,SubmitResult.FAILED_TO_INVALID_JOB_STATE);
+				callback.onComplete(job,SubmitCallbackResult.FAILED_TO_INVALID_JOB_STATE);
 			return;
 		} else if (super.getServerCount()==0) {
 			if(callback!=null)
-				callback.onSubmissionComplete(job, SubmitResult.FAILED_TO_NO_SERVER);
+				callback.onComplete(job, SubmitCallbackResult.FAILED_TO_NO_SERVER);
 			return;
 		}
 		
@@ -246,11 +248,11 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			if(!this.open.isEmpty()) {
 				this.jobQueue.addLast(job);
 				
-				for(InnerConnectionController<?> icc : this.open) {
+				for(InnerConnectionController<?,?> icc : this.open) {
 					if(icc.grab()) return;
 				}
 				
-				final InnerConnectionController<?> icc;
+				final InnerConnectionController<?,?> icc;
 				if ((icc = this.available.tryFirst(null))!=null){
 					// Make a connection
 					icc.openServer(false);					
@@ -258,7 +260,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 				
 			} else {
 				
-				final InnerConnectionController<?> icc;
+				final InnerConnectionController<?,?> icc;
 				if ((icc = this.available.tryFirst(job))!=null){
 					// Add job to job queue
 					this.jobQueue.addLast(job);
@@ -268,13 +270,13 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 					
 				} else {
 					// No available servers to connect to, fail job
-					job.onSubmissionComplete(GearmanClient.SubmitResult.FAILED_TO_NO_SERVER);
+					job.onSubmissionComplete(GearmanClient.SubmitCallbackResult.FAILED_TO_NO_SERVER);
 				}
 			}
 		}
 	}
 	
-	private final void onConnectionOpen(final InnerConnectionController<?> icc) {
+	private final void onConnectionOpen(final InnerConnectionController<?,?> icc) {
 		synchronized(this.open) {
 			if(this.open.isEmpty())
 				this.available.clearFailKeys();
@@ -291,7 +293,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		}
 	}
 	
-	private final void addController(final InnerConnectionController<?> icc) {
+	private final void addController(final InnerConnectionController<?,?> icc) {
 		synchronized(this.open) {
 			assert (icc.getState().equals(ControllerState.CLOSED)
 				|| icc.getState().equals(ControllerState.CONNECTING));
@@ -301,7 +303,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		}
 	}
 	
-	private final void dropController(final InnerConnectionController<?> icc, final ControllerState oldState) {
+	private final void dropController(final InnerConnectionController<?,?> icc, final ControllerState oldState) {
 		synchronized(this.open) {
 			assert icc.getState().equals(ControllerState.DROPPED);
 			
@@ -315,7 +317,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 				if(job!=null) {
 					// There should be no fail keys while there are open connections
 					assert this.open.isEmpty();
-					this.failTo(job, SubmitResult.FAILED_TO_CONNECT);
+					this.failTo(job, SubmitCallbackResult.FAILED_TO_CONNECT);
 				}
 				
 				break;
@@ -342,7 +344,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	 * Call when there is an expected disconnect.
 	 * @param icc
 	 */
-	private final void onClose(final InnerConnectionController<?> icc) {
+	private final void onClose(final InnerConnectionController<?,?> icc) {
 		
 		/*
 		 * Move the connection controller from the open set to the available set
@@ -374,7 +376,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 					// If there are jobs in the jobQueue, make a new connection
 					
 					// try to make a new connection and set the fail key
-					final InnerConnectionController<?> conn = this.available.tryFirst(job);
+					final InnerConnectionController<?,?> conn = this.available.tryFirst(job);
 					
 					if(conn!=null) {
 						assert conn.getState().equals(ControllerState.CLOSED)
@@ -385,7 +387,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 						
 					} else {
 						// If conn is null, then there are no other available connections
-						this.failTo(job, SubmitResult.FAILED_TO_NO_SERVER);
+						this.failTo(job, SubmitCallbackResult.FAILED_TO_NO_SERVER);
 					}
 				}
 			}
@@ -399,7 +401,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		}
 	}
 	
-	private final void onFailedConnection(final InnerConnectionController<?> icc) {
+	private final void onFailedConnection(final InnerConnectionController<?,?> icc) {
 		synchronized(this.open) {
 			assert this.available.contains(icc);
 			final ClientJobSubmission cjs = this.available.remove(icc);
@@ -408,7 +410,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			if(cjs!=null) {
 				// There should be no fail keys while there are open connections
 				assert this.open.isEmpty();
-				this.failTo(cjs, SubmitResult.FAILED_TO_CONNECT);
+				this.failTo(cjs, SubmitCallbackResult.FAILED_TO_CONNECT);
 			}
 			
 			this.available.add(icc);
@@ -416,7 +418,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		}
 	}
 	
-	private final void failTo(final ClientJobSubmission job, SubmitResult result) {
+	private final void failTo(final ClientJobSubmission job, SubmitCallbackResult result) {
 		
 		synchronized(this.open) {
 			/*
@@ -444,7 +446,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		this.jobQueue.addFirst(job);
 	}
 	
-	private final void removeFromOpen(final InnerConnectionController<?> icc) {
+	private final void removeFromOpen(final InnerConnectionController<?,?> icc) {
 		synchronized(this.open) {
 			assert icc.getState().equals(ControllerState.CLOSED);
 			assert this.open.contains(icc);

@@ -3,11 +3,21 @@ package org.gearman;
 import java.io.IOException;
 import java.util.Set;
 
+import org.gearman.core.GearmanCallbackHandler;
+import org.gearman.core.GearmanCallbackResult;
 import org.gearman.core.GearmanCodec;
 import org.gearman.core.GearmanConnectionHandler;
-import org.gearman.core.GearmanFailureHandler;
 
 public interface GearmanServer extends GearmanService {
+	
+	public static enum ConnectCallbackResult implements GearmanCallbackResult{
+		SERVER_SHUTDOWN;
+
+		@Override
+		public boolean isSuccessful() {
+			return false;
+		}
+	}
 	
 	/**
 	 * Attempts to open the default port to listen on
@@ -65,6 +75,6 @@ public interface GearmanServer extends GearmanService {
 	 * @return
 	 * 		A local connection to this GearmanServer
 	 */
-	public <A1,A2> void createGearmanConnection(GearmanConnectionHandler<A1> handler, A2 att, GearmanFailureHandler<A2> failHandler);
+	public <A> void createGearmanConnection(GearmanConnectionHandler<A> handler, GearmanCallbackHandler<GearmanServer, ConnectCallbackResult> failHandler);
 }
 

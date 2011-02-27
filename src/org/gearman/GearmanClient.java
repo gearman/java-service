@@ -1,5 +1,8 @@
 package org.gearman;
 
+import org.gearman.core.GearmanCallbackHandler;
+import org.gearman.core.GearmanCallbackResult;
+
 /**
  * A GearmanCliet submits {@link GearmanJob}s and {@link GearmanBackgroundJob}s
  * to gearman job servers
@@ -13,7 +16,7 @@ public interface GearmanClient extends GearmanJobServerPool {
 	 * @author isaiah
 	 *
 	 */
-	public static enum SubmitResult {
+	public static enum SubmitCallbackResult implements GearmanCallbackResult{
 		
 		/**
 		 * The job was sucessfuly submitted to a job server 
@@ -40,16 +43,13 @@ public interface GearmanClient extends GearmanJobServerPool {
 		 * The {@link GearmanClient} is shutdown
 		 */
 		FAILED_TO_SHUTDOWN;
-				
+		
+		@Override
 		public boolean isSuccessful() {
 			return this==SUBMIT_SUCCESSFUL;
 		}
 		
 	}
 	
-	public static interface SubmitHandler {
-		public void onSubmissionComplete(GearmanJob job, SubmitResult result);
-	}
-	
-	public void submitJob(GearmanJob job, SubmitHandler callback);
+	public void submitJob(GearmanJob job, GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback);
 }

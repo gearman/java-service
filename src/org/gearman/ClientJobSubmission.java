@@ -1,22 +1,22 @@
 package org.gearman;
 
-import org.gearman.GearmanClient.SubmitHandler;
-import org.gearman.GearmanClient.SubmitResult;
+import org.gearman.GearmanClient.SubmitCallbackResult;
+import org.gearman.core.GearmanCallbackHandler;
 
 class ClientJobSubmission {
 	public final GearmanJob job;
-	public final SubmitHandler callback;
+	public final GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback;
 	public final boolean isBackground;
 	
-	public SubmitResult result;
+	public SubmitCallbackResult result;
 	
-	public ClientJobSubmission(final GearmanJob job, final SubmitHandler callback, final boolean isBackground) {
+	public ClientJobSubmission(final GearmanJob job, final GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback, final boolean isBackground) {
 		this.job = job;
 		this.callback = callback;
 		this.isBackground = isBackground;
 	}
 	
-	public void onSubmissionComplete(final SubmitResult result) {
+	public void onSubmissionComplete(final SubmitCallbackResult result) {
 		synchronized(this) {
 			if(this.result!=null) return;
 			this.result = result;
@@ -24,10 +24,10 @@ class ClientJobSubmission {
 		}
 		
 		if(this.callback!=null) 
-			this.callback.onSubmissionComplete(job, result);
+			this.callback.onComplete(job, result);
 	}
 	
-	public SubmitResult join() {
+	public SubmitCallbackResult join() {
 		/*
 		 *  This method is a non-interrupting blocking method.
 		 *  If interrupted, the current thread will be re-interrupted

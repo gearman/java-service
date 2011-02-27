@@ -3,26 +3,26 @@ package org.gearman;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.gearman.GearmanJobStatus.OperationResult;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
+import org.gearman.core.GearmanCallbackResult;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
-import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanPacket;
 import org.gearman.util.ByteArray;
 
 /**
  * @author isaiah
  */
-abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.ConnectionController<?>> implements GearmanJobServerPool {
+abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.ConnectionController<?,?>> implements GearmanJobServerPool {
 	private static final String DEFAULT_CLIENT_ID = "-";
 	
 	public enum ControllerState {
@@ -42,6 +42,14 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		OPEN,
 		
 		/**
+		 * The state specifying the ConnectionController is waiting to close. The controller
+		 * will enter this state if the user has specified it wants to close the connection
+		 * but there are pending JOB_STATUS 
+		 */
+		CLOSE_PENDING,
+		
+		
+		/**
 		 * The state specifying the ConnectionController is not connected to a job server<br>
 		 * <br>
 		 * You can enter this state from the CONNECTING, OPEN, CLOSED, and WAITING states. This is the initial state.
@@ -52,7 +60,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 * The state specifying the ConnectionController is no longer in regular use or controlled by
 		 * the ServiceClient
 		 * <br>
-		 *  You can enter this state from the CONNECTING, OPEN, CLOSED, DROPPED, and WAITING states. This is the final state 
+		 *  You can enter this state from the CONNECTING, OPEN, CLOSED, CLOSE_PENDING ,DROPPED, and WAITING states. This is the final state 
 		 */
 		DROPPED,
 		
@@ -73,18 +81,17 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 	 *
 	 * @param <K>
 	 */
-	abstract static class ConnectionController<K> implements GearmanConnectionHandler<Object>, GearmanFailureHandler<Object>, Delayed {
+	abstract static class ConnectionController<K, C extends GearmanCallbackResult> implements GearmanConnectionHandler<Object>, GearmanCallbackHandler<K,C> {
 		private final JobServerPoolAbstract<?> sc;
 		
 		/** The key mapping to this object in the connMap */
 		private final K key;
-		private ControllerState userState = ControllerState.CLOSED;
+		private ControllerState state = ControllerState.CLOSED;
 		private GearmanConnection<?> conn;
 		private ScheduledFuture<?> future;
 		private Closer closer;
 		
-		private ControllerState trueState = ControllerState.CLOSED;
-		private ConcurrentHashMap<ByteArray, JobStatus> pendingJobStatus; 
+		private HashMap<ByteArray, InnerJobStatus> pendingJobStatus; 
 		
 		private final Object lock = new Object();
 		
@@ -93,25 +100,55 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			this.sc = sc;
 		}
 		
+		
+		public final boolean isConnecting(){
+			return this.state.equals(ControllerState.CONNECTING);
+		}
+		
+		public final boolean isOpen(){
+			return this.state.equals(ControllerState.OPEN);
+		}
+		
+		public final boolean isClosePending() {
+			return this.state.equals(ControllerState.CLOSE_PENDING);
+		}
+		
+		public final boolean isClosed() {
+			return this.state.equals(ControllerState.CLOSED);
+		}
+		
+		public final boolean isDropped() {
+			return this.state.equals(ControllerState.DROPPED);
+		}
+		
+		public final boolean isWaiting() {
+			return this.state.equals(ControllerState.WAITING);
+		}
+		
 		@Override
 		public final void onAccept(final GearmanConnection<Object> conn) {
 			
 			synchronized(this.lock) {
-				final ControllerState oldState = this.userState;
-				if(this.userState.equals(ControllerState.CONNECTING) && !this.sc.isShutdown) {
+				
+				assert this.isConnecting() || this.isClosed() || this.isDropped();
+				assert !this.isOpen() && !this.isClosePending() && !this.isWaiting();
+				
+				final ControllerState oldState = this.state;
+				if(this.state.equals(ControllerState.CONNECTING)) {
 					
 					// Normal execution
 					assert this.conn==null;
 					
-					this.userState = ControllerState.OPEN;
+					this.state = ControllerState.OPEN;
 					this.conn = conn;
 					this.onOpen(oldState);
 					
 					if(!this.sc.id.equals(JobServerPoolAbstract.DEFAULT_CLIENT_ID)) {
-						this.conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null, null);
+						this.conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null);
 					}
 					
 				} else {
+					
 					// If not in the CONNECTING state when a connection is accepted, then the
 					// user has changed the state while in the connection proccess.
 					
@@ -122,9 +159,6 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					
-					if(this.sc.isShutdown)
-						this.dropServer();
 				}
 			}
 		}
@@ -132,7 +166,16 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		@Override
 		public final void onDisconnect(final GearmanConnection<Object> conn) {
 			synchronized(this.lock) {
-				if(!this.userState.equals(ControllerState.OPEN)) return;
+				if(!this.isOpen() && !this.isClosePending()) return;
+				
+				if(this.pendingJobStatus!=null) {
+					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.fail(OperationResult.SERVER_DISCONNECTED);
+					}
+					
+					this.pendingJobStatus.clear();
+					this.pendingJobStatus = null;
+				}
 				
 				// If we disconnect from the OPEN state, then we have unexpectedly disconnected
 				this.closeServer();
@@ -140,10 +183,21 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
-		@Override
+		public void onComplete(K data, C result) {
+			
+		}
 		public final void onFail(final Throwable exc, final Object attachment) {
 			synchronized(this.lock) {
 				assert this.conn==null;
+				
+				if(this.pendingJobStatus!=null) {
+					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.fail(OperationResult.CONNECTION_FAILED);
+					}
+					
+					this.pendingJobStatus.clear();
+					this.pendingJobStatus = null;
+				}
 				
 				if(this.sc.isShutdown)
 					this.dropServer();
@@ -151,27 +205,6 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					this.closeServer();
 					this.onLostConnection(sc.policy, Grounds.FAILED_CONNECTION);
 				}
-			}
-		}
-		
-		public final void dropServer() {
-			synchronized(this.lock) {
-				final ControllerState oldState = this.userState;
-				if(this.userState.equals(ControllerState.DROPPED)) return;
-				
-				this.userState = ControllerState.DROPPED;
-				sc.connMap.remove(key);
-				
-				if(this.conn!=null) {
-					try {
-						conn.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-				
-				this.onDrop(oldState);
 			}
 		}
 		
@@ -183,7 +216,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 */
 		protected final void timeout() {
 			synchronized(this.lock) {
-				if(this.userState.equals(ControllerState.OPEN)) {
+				if(this.state.equals(ControllerState.OPEN)) {
 					this.closeServer();
 					this.onLostConnection(sc.policy, Grounds.UNEXPECTED_DISCONNECT);
 				}
@@ -192,61 +225,58 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		
 		
-		public final void closeServer() {
-			synchronized(this.lock) {
-				ControllerState oldState = this.userState;
-				this.userState = ControllerState.CLOSED;
-				
-				switch(oldState) {
-				case CLOSED:
-				case DROPPED:
-					return;
-				case OPEN:
-					assert this.conn!=null;
-					try {
-						this.conn.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					this.conn = null;
-					break;
-				case WAITING:
-					if(this.future!=null) {
-						this.future.cancel(true);
-						this.future = null;
-					}
-					break;
-				case CONNECTING:
-					break;
-				}
-				
-				this.onClose(oldState);
-			}
+		public final K getKey() {
+			return this.key;
+		}
+		
+		public ControllerState getState() {
+			return this.state;
+		}
+		
+		public GearmanConnection<?> getConnection() {
+			return this.conn;
 		}
 		
 		/**
-		 * Attempts to put the ConnectionController in the {@link ControllerState#WAITING} state.<br>
+		 * Attempts to connect to a job server iff the current state allows it.<br>
 		 * <br>
-		 * The {@link ControllerState#WAITING} is simply a timed state that waits a persiod of time
-		 * before moving to the {@link ControllerState#CLOSED}. Moving from the {@link ControllerState#WAITING}
-		 * state to the {@link ControllerState#OPEN} is legal but not suggested.<br>
-		 * <br>
-		 * Connection controllers are typically put into the {@link ControllerState#WAITING} after a
-		 * connectivity failure. We wait hoping that after the given period has elapsed, the job
-		 * server will be running properly.<br>
-		 * <br>
-		 * The waiting period is specified the reconnect time, {@link GearmanJobServerPool#getReconnectPeriod(TimeUnit)}. 
+		 * If in the {@link ControllerState#OPEN} or {@link ControllerState#DROPPED} state, no attempt will be made to connect. If the <code>force</code>
+		 * parameter is set to <code>true</code>, then it an attempt if in the {@link ControllerState#WAITING} or {@link ControllerState#CLOSED} state.
+		 * Otherwise, an attempt will only be made if in the {@link ControllerState#CLOSED} state.<br>
 		 * 
-		 * @param callback
-		 * 		A runnable that executes if the waiting period expires without before the state changes.
-		 * 		If the state changes before the waiting period expires, the callback will not execute.
-		 * 		This includes moving from the WAITING state to the WAITING state.
+		 * @param force
+		 * 		Will attempt to connect even if in the WAITING state
+		 * @return
+		 * 		<code>true</code> if an attempt is being made. If <code>true</code> the state of
+		 * 		this ConnectionController will {@link ControllerState#OPEN} when this method
+		 * 		exits. If <code>false</code> the state will be the same as it was before the
+		 * 		invocation
 		 */
-		public final void waitServer(final Runnable callback) {
-			this.waitServer(callback, sc.waitPeriod, TimeUnit.NANOSECONDS);
+		public final boolean openServer(final boolean force) {
+			synchronized(this.lock) {
+				
+				final ControllerState oldState = this.state; 
+				switch(this.state) {
+				case CONNECTING:
+				case OPEN:
+				case DROPPED:
+					return false;
+				case WAITING:
+					if(!force) return false;
+				case CLOSED:
+					this.state = ControllerState.CONNECTING;
+					this.onConnect(oldState);
+					return true;
+				case CLOSE_PENDING:
+					this.state = ControllerState.OPEN;
+				default:
+					assert false;
+					return false;
+				}
+			}
 		}
-		
+
+
 		/**
 		 * Attempts to put the ConnectionController in the {@link ControllerState#WAITING} state.<br>
 		 * <br>
@@ -272,8 +302,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				if(this.closer==null) this.closer = new Closer();
 				this.closer.setCallback(callback);
 				
-				final ControllerState oldState = this.userState;
-				switch(this.userState) {
+				final ControllerState oldState = this.state;
+				switch(this.state) {
 				case DROPPED:
 					return;
 				case WAITING:
@@ -288,71 +318,108 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					break;
 				}
 				
-				this.userState = ControllerState.WAITING;
+				this.state = ControllerState.WAITING;
 				sc.getGearman().getPool().schedule(this.closer, waittime, unit);
 				this.onWait(oldState);
 			}
 		}
-		
-		public final K getKey() {
-			return this.key;
-		}
-		
-		public ControllerState getState() {
-			return this.userState;
-		}
-		
-		public GearmanConnection<?> getConnection() {
-			return this.conn;
-		}
-		
+
+
 		/**
-		 * Attempts to connect to a job server iff the current state allows it.<br>
+		 * Attempts to put the ConnectionController in the {@link ControllerState#WAITING} state.<br>
 		 * <br>
-		 * If in the {@link ControllerState#OPEN} or {@link ControllerState#DROPPED} state, no attempt will be made to connect. If the <code>force</code>
-		 * parameter is set to <code>true</code>, then it an attempt if in the {@link ControllerState#WAITING} or {@link ControllerState#CLOSED} state.
-		 * Otherwise, an attempt will only be made if in the {@link ControllerState#CLOSED} state.<br>
+		 * The {@link ControllerState#WAITING} is simply a timed state that waits a persiod of time
+		 * before moving to the {@link ControllerState#CLOSED}. Moving from the {@link ControllerState#WAITING}
+		 * state to the {@link ControllerState#OPEN} is legal but not suggested.<br>
+		 * <br>
+		 * Connection controllers are typically put into the {@link ControllerState#WAITING} after a
+		 * connectivity failure. We wait hoping that after the given period has elapsed, the job
+		 * server will be running properly.<br>
+		 * <br>
+		 * The waiting period is specified the reconnect time, {@link GearmanJobServerPool#getReconnectPeriod(TimeUnit)}. 
 		 * 
-		 * @param force
-		 * 		Will attempt to connect even if in the WAITING state
-		 * @return
-		 * 		<code>true</code> if an attempt is being made. If <code>true</code> the state of
-		 * 		this ConnectionController will {@link ControllerState#OPEN} when this method
-		 * 		exits. If <code>false</code> the state will be the same as it was before the
-		 * 		invocation
+		 * @param callback
+		 * 		A runnable that executes if the waiting period expires without before the state changes.
+		 * 		If the state changes before the waiting period expires, the callback will not execute.
+		 * 		This includes moving from the WAITING state to the WAITING state.
 		 */
-		public final boolean openServer(final boolean force) {
+		public final void waitServer(final Runnable callback) {
+			this.waitServer(callback, sc.waitPeriod, TimeUnit.NANOSECONDS);
+		}
+
+
+		public final void closeServer() {
 			synchronized(this.lock) {
+				ControllerState oldState = this.state;
+				this.state = ControllerState.CLOSED;
 				
-				final ControllerState oldState = this.userState; 
-				switch(this.userState) {
-				case CONNECTING:
-				case OPEN:
-				case DROPPED:
-					return false;
-				case WAITING:
-					if(!force) return false;
+				switch(oldState) {
 				case CLOSED:
-					this.userState = ControllerState.CONNECTING;
-					this.onConnect(oldState);
-					return true;
+				case DROPPED:
+					return;
+				case CLOSE_PENDING:
+				case OPEN:
+					assert this.conn!=null;
+					if(this.pendingJobStatus!=null && !this.pendingJobStatus.isEmpty()) {
+						// Set the state to pending and return. Do not call onClose
+						this.state = ControllerState.CLOSE_PENDING;
+						return;
+					} else {
+						try {
+							this.conn.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						this.conn = null;
+					}
+					break;
+				case WAITING:
+					if(this.future!=null) {
+						this.future.cancel(true);
+						this.future = null;
+					}
+					break;
+				case CONNECTING:
+					break;
 				default:
 					assert false;
-					return false;
+					return;
 				}
+				
+				this.onClose(oldState);
 			}
 		}
-		
-		@Override
-		public long getDelay(TimeUnit unit) {
-			final ScheduledFuture<?> f  = this.future;
-			return f==null? -1: f.getDelay(unit);
-		}
-		
-		@Override
-		public int compareTo(Delayed o) {
-			final ScheduledFuture<?> f  = this.future;
-			return f==null? 0 : f.compareTo(o);
+
+
+		public final void dropServer() {
+			synchronized(this.lock) {
+				final ControllerState oldState = this.state;
+				if(this.state.equals(ControllerState.DROPPED)) return;
+				
+				this.state = ControllerState.DROPPED;
+				sc.connMap.remove(key);
+				
+				if(this.conn!=null) {
+					try {
+						conn.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+				if(this.pendingJobStatus!=null) {
+					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.fail(OperationResult.SERVER_DROPPED);
+					}
+					
+					this.pendingJobStatus.clear();
+					this.pendingJobStatus = null;
+				}
+				
+				this.onDrop(oldState);
+			}
 		}
 		
 		protected abstract void onConnect(ControllerState oldState);
@@ -362,73 +429,68 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		protected abstract void onWait(ControllerState oldState);
 		protected abstract void onNew();
 		
-		public final JobStatus getStatus(final ByteArray jobHandle) {
-			switch(this.userState) {
-			case CONNECTING:
-			case OPEN:
-			case WAITING:
-			case CLOSED:
-				break;
-			case DROPPED:
-				return null;
-			default:
-				assert false;
-				return null;
-			}
-			
-			if(pendingJobStatus==null)
-				pendingJobStatus=new ConcurrentHashMap<ByteArray, JobStatus>();
-			else {
-				JobStatus js = pendingJobStatus.get(jobHandle);
-				if(js!=null) return js;
-			}
-			
-			assert !pendingJobStatus.containsKey(jobHandle);
-						
-			final JobStatus js = new JobStatus() {
-				
-				@Override
-				protected final synchronized void complete(final OperationResult opResult, boolean isKnown, final boolean isRunning, final long numerator, final long denominator) {
-					// TODO remve from list
-					
-					super.complete(opResult, isKnown, isRunning, numerator, denominator);
-				}
-				
-				public final synchronized boolean cancel(boolean arg) {
-					// TODO remove from list
-					
-					return super.cancel(arg);
-				}
-			};
-			
-			final Object t1;
-			t1 = pendingJobStatus.put(jobHandle, js);
-			
-			assert t1==null;
-			assert pendingJobStatus.containsKey(jobHandle);
-			
-			return js;
-		}
-		
-		private final synchronized void sendStatusRequest(final ByteArray jobHandle) {
-			assert this.userState.equals(ControllerState.OPEN);
-			this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), null, new GearmanCompletionHandler<Object>(){
-				@Override
-				public void onComplete(Object attachment) { }
-				
-				@Override
-				public void onFail(Throwable exc, Object attachment) {
-					final JobStatus js = pendingJobStatus.remove(jobHandle);
-					if(js!=null) js.complete(OperationResult.OPERATION_REQUEST_FAILED, false, false, 0, 0);
-				}
-			});			
-		}
-		
-		public final JobStatus removeStatus(final ByteArray jobHandle) {
-			return pendingJobStatus==null? null: pendingJobStatus.remove(jobHandle);
-		}
-		
 		protected abstract void onLostConnection(GearmanLostConnectionPolicy policy, Grounds grounds);
+		
+		public final JobStatus getStatus(final ByteArray jobHandle) {
+			
+			final InnerJobStatus jobStatus = new InnerJobStatus(jobHandle);
+			
+			synchronized(this.lock) {
+				if(this.pendingJobStatus==null)
+					this.pendingJobStatus = new HashMap<ByteArray,InnerJobStatus>();
+				
+				this.pendingJobStatus.put(jobHandle, jobStatus);
+				
+				if(!this.isOpen()) this.openServer(true);
+	
+				return jobStatus;
+			}
+			
+		}
+		
+		private final boolean removeJobStatus(ByteArray jobHandle) {
+			synchronized(this.lock) {
+				final boolean value = this.pendingJobStatus.remove(jobHandle)!=null;
+				
+				if(this.pendingJobStatus.isEmpty() && this.isClosePending()) {
+					this.pendingJobStatus = null;
+					this.closeServer();
+				}
+				
+				return value;
+			}
+		}
+
+		private final class InnerJobStatus extends JobStatus {
+			private final ByteArray jobHandle; 
+			
+			public InnerJobStatus(ByteArray jobHandle) {
+				this.jobHandle = jobHandle;
+			}
+			
+			@Override
+			public final boolean cancel(boolean arg) {
+				boolean value = super.cancel(arg);
+				ConnectionController.this.removeJobStatus(jobHandle);
+
+				return value;
+			}
+			
+			@Override
+			public final void complete(final OperationResult opResult, boolean isKnown, final boolean isRunning, final long numerator, final long denominator) {
+				super.complete(opResult, isKnown, isRunning, numerator, denominator);
+				ConnectionController.this.removeJobStatus(jobHandle);
+			}
+
+			public void fail(OperationResult or) {
+				/*
+				 *  If a server is dropped while there are pending job_status operations, there is
+				 *  no need to remove it from the data structure. Object deconstruction is done in
+				 *  that method 
+				 */
+				super.complete(or, false, false, 0, 0);
+			}
+		}
 		
 		private final class Closer implements Runnable {
 			private Runnable callback;
@@ -436,8 +498,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			@Override
 			public void run() {
 				synchronized(ConnectionController.this.lock) {
-					if(ConnectionController.this.userState.equals(ControllerState.WAITING) && !Thread.currentThread().isInterrupted()) {
-						ConnectionController.this.userState = ControllerState.CLOSED;
+					if(ConnectionController.this.state.equals(ControllerState.WAITING) && !Thread.currentThread().isInterrupted()) {
+						ConnectionController.this.state = ControllerState.CLOSED;
 						if(this.callback!=null) this.callback.run();
 						
 						ConnectionController.this.future=null;
@@ -563,7 +625,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		GearmanConnection<?> conn;
 		for(X x : this.connMap.values()) {
 			if((conn = x.getConnection())!=null) {
-				conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(id), null, null);
+				conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(id), null);
 			}
 		}
 	}

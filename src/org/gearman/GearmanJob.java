@@ -1,10 +1,11 @@
 package org.gearman;
 
+import java.lang.ref.WeakReference;
 import java.util.UUID;
 import java.util.concurrent.Future;
 
+import org.gearman.GearmanJobStatus.OperationResult;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
-import org.gearman.JobServerPoolAbstract.ControllerState;
 import org.gearman.core.GearmanConnection;
 import org.gearman.util.ByteArray;
 
@@ -81,8 +82,8 @@ public abstract class GearmanJob {
 	/** The job priority level. The higher the level, the sooner it will be pulled from the job queue */
 	private final Priority priority;
 
-	/** Contains the information needed to send data back the client */
-	private ConnectionInfo connInfo = null;
+	private WeakReference<ConnectionController<?,?>> connection;
+	private ByteArray jobHandle;
 
 	/**
 	 * Sets the connection information.<br>
@@ -94,9 +95,10 @@ public abstract class GearmanJob {
 	 * @param jobHandle
 	 * 		The job handle for this specific job
 	 */
-	final void setConnection(final ConnectionController<?> conn, final byte[] jobHandle) {
+	final void setConnection(final ConnectionController<?,?> conn, final ByteArray jobHandle) {
 		this.state = State.WORKING;
-		this.connInfo = new ConnectionInfo(conn, jobHandle);
+		this.connection = new WeakReference<ConnectionController<?,?>>(conn);
+		this.jobHandle = jobHandle;
 	}
 	
 	final synchronized boolean submit() {
@@ -113,9 +115,9 @@ public abstract class GearmanJob {
 	 * @return
 	 * 		The GearmanConnection
 	 */
-	final GearmanConnection<?> getConnection() {
-		final ConnectionInfo connInfo = this.connInfo; 
-		return connInfo==null? null: connInfo.connection.getConnection();
+	final GearmanConnection<?> getConnection() { 
+		final ConnectionController<?,?> conn = connection==null? null: connection.get();
+		return conn==null? null: conn.getConnection();
 	}
 	
 	/**
@@ -135,9 +137,8 @@ public abstract class GearmanJob {
 	 * @return
 	 * 		The job handle if one is available. If not, null is returned
 	 */
-	public final byte[] getJobHandle() {
-		final ConnectionInfo connInfo = this.connInfo;
-		return connInfo==null? null: connInfo.jobHandle.clone();
+	public final ByteArray getJobHandle() {
+		return this.jobHandle;
 	}
 
 	/**
@@ -151,8 +152,8 @@ public abstract class GearmanJob {
 	 * @return true if and only if there is a live connection to the job server.
 	 */
 	public final boolean isConnected() {
-		final ConnectionInfo connInfo = this.connInfo;
-		return connInfo==null ? false : connInfo.connection.equals(ControllerState.OPEN);
+		ConnectionController<?,?> conn = this.connection==null? null: this.connection.get();
+		return conn==null ? false : conn.isOpen();
 	}
 
 	/**
@@ -336,7 +337,6 @@ public abstract class GearmanJob {
 		this.state = State.COMPLETED;
 		
 		this.onComplete(result);
-		this.connInfo = null;
 	}
 
 	/**
@@ -384,28 +384,32 @@ public abstract class GearmanJob {
 	 */
 	public final Future<GearmanJobStatus> getStatus() {
 		
+		if(this.isComplete()) {
+			// The job has completed and therefore will not be available in the job server
+			JobStatus status = new JobStatus();
+			status.complete(OperationResult.WORK_COMPLETE, false, false, 0, 0);
+			
+			return status;
+		}
+		
 		// Get the connection controller that is handling this server
-		final ConnectionController<?> cc = this.connInfo.connection;
+		final ConnectionController<?,?> cc = this.connection==null? null: this.connection.get();
+		
+		if(cc==null) {
+			//No connection is available
+			JobStatus status = new JobStatus();
+			status.complete(OperationResult.SERVER_NOT_AVAILABLE, false, false, 0, 0);
+			
+			return status;
+		}
+		
+		// If the connection is defined, then the job handle should be defined
+		assert this.jobHandle != null;
 		
 		// Get the controller get the status. This method returns a GearmanJobStatus/Future object 
-		final JobStatus jobStatus = cc.getStatus(new ByteArray(this.connInfo.jobHandle));
+		final JobStatus jobStatus = cc.getStatus(this.getJobHandle());
 		
 		// return the job status as a Future object
 		return jobStatus;
-	}
-	
-	/**
-	 * Holds the information needed by the worker to send data back to the client and by the
-	 * client to poll status information.
-	 * @author isaiah.v
-	 */
-	private static final class ConnectionInfo {
-		public final ConnectionController<?> connection;
-		public final byte[] jobHandle;
-		
-		public ConnectionInfo(final ConnectionController<?> conn, final byte[] jobHandle) {
-			this.connection = conn;
-			this.jobHandle = jobHandle;
-		}
 	}
 }

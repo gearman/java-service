@@ -4,13 +4,16 @@ import java.util.Set;
 
 import org.gearman.JobServerPoolAbstract.ConnectionController;
 import org.gearman.JobServerPoolAbstract.ControllerState;
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
+import org.gearman.core.GearmanCallbackResult;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.core.GearmanPacket.Magic;
+import org.gearman.util.ByteArray;
 
-abstract class WorkerConnectionController<K> extends ConnectionController<K> {
+abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> extends ConnectionController<K,C> {
 
 	private static final int NOOP_TIMEOUT = 59000;
 	private static final int GRAB_TIMEOUT = 19000;
@@ -31,7 +34,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 	 */
 	private long grabTimeout = Long.MAX_VALUE;
 	
-	WorkerConnectionController(JobServerPoolAbstract<WorkerConnectionController<?>> sc, K key) {
+	WorkerConnectionController(JobServerPoolAbstract<WorkerConnectionController<?,?>> sc, K key) {
 		super(sc, key);
 	}
 	
@@ -41,7 +44,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		
 		if(!funcNames.isEmpty()) {
 			for(String funcName : funcNames) {
-				conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null, null);
+				conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
 			}
 			this.toDispatcher();
 		}
@@ -50,7 +53,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		final GearmanConnection<?> conn = super.getConnection();
 		if(conn==null) return;
 		
-		conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null, null);
+		conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
 		this.toDispatcher();
 	}
 	
@@ -58,7 +61,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		final GearmanConnection<?> conn = super.getConnection();
 		if(conn==null) return;
 		
-		conn.sendPacket(GearmanPacket.createCANT_DO(funcName), null, null);
+		conn.sendPacket(GearmanPacket.createCANT_DO(funcName), null);
 	}
 	
 	private final void error(final GearmanPacket packet) {
@@ -91,18 +94,11 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		this.getWorker().getGearman().getPool().execute(new Runnable() {
 			@Override
 			public void run() {
-				conn.sendPacket(GearmanPacket.createGRAB_JOB(), null ,new GearmanCompletionHandler<Object>() {
-					//TODO move this ExceptionHandler so that we don't need to create a new instance every timer
-					
+				conn.sendPacket(GearmanPacket.createGRAB_JOB(), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 					@Override
-					public void onComplete(Object attachment) {}
-					@Override
-					public void onFail(Throwable exc, Object attachment) {
-						/*
-						 * If we fail, cancel the grab task by calling the
-						 * done() method
-						 */
-						WorkerConnectionController.this.getDispatcher().done();
+					public void onComplete(GearmanPacket data, SendCallbackResult result) {
+						if(!result.isSuccessful())
+							WorkerConnectionController.this.getDispatcher().done();
 					}
 				});
 			}
@@ -116,6 +112,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		try {
 			
 			final byte[] jobHandle = packet.getArgumentData(0);
+			final ByteArray jobHandle_BA = new ByteArray(jobHandle);
 			final String name = new String(packet.getArgumentData(1),GearmanConstants.UTF_8);
 			final byte[] jobData = packet.getArgumentData(2);
 			
@@ -128,19 +125,19 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 				// but before this lookup is performed.
 
 				// send WORK_FAIL
-				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ, jobHandle), null,null /*TODO*/);
+				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ, jobHandle),null /*TODO*/);
 				return;
 			}
 						
 			// Create job for function
-			final GearmanJob job = new WorkerJob(name, jobData,this,jobHandle);
+			final GearmanJob job = new WorkerJob(name, jobData,this,jobHandle_BA);
 			
 			// Run function
 			try {
 				final GearmanJobResult result = func.work(job);
 				job.setResult(result==null? GearmanJobResult.workSuccessful(): result);
 			} catch(Exception e) {
-				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ,jobHandle), null,null /*TODO*/);
+				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ,jobHandle),null /*TODO*/);
 			}
 			
 		} finally {
@@ -150,25 +147,12 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 	}
 	
 	private final void noJob(final GearmanConnection<?> conn) {
-		// Since the connection is currently in the sleeping state, it will
-		// not yet return to the dispatcher's queue
 				
 		this.grabTimeout = Long.MAX_VALUE;
 		this.noopTimeout = System.currentTimeMillis();
 		
 		this.getDispatcher().done();
-		conn.sendPacket(GearmanPacket.createPRE_SLEEP(), null, new GearmanCompletionHandler<Object>(){
-			// TODO move task such that we do not need to create a new instance every time
-			@Override
-			public void onComplete(Object attachment) {
-				// TODO Auto-generated method stub
-				
-			}
-			@Override
-			public void onFail(Throwable exc, Object attachment) {
-				exc.printStackTrace();
-			};
-		});
+		conn.sendPacket(GearmanPacket.createPRE_SLEEP(), null /*TODO*/);
 		
 		// Since the connection is currently in the sleeping state, it will
 		// not yet return to the dispatcher's queue
@@ -227,7 +211,7 @@ abstract class WorkerConnectionController<K> extends ConnectionController<K> {
 		final GearmanConnection<?> conn = super.getConnection();
 		if(conn==null) return;
 		
-		conn.sendPacket(GearmanPacket.createRESET_ABILITIES(), null, null);
+		conn.sendPacket(GearmanPacket.createRESET_ABILITIES(), null);
 	}
 	
 	public final void timeoutCheck(long time) {

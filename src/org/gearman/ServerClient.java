@@ -2,8 +2,9 @@ package org.gearman;
 
 import java.io.IOException;
 
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanPacket;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
 
 
@@ -144,7 +145,7 @@ interface ServerClient {
 	 * @throws IOException
 	 * 		if any I/O exception occurs.  Namely, the ServerClient is closed
 	 */
-	public <A> void sendExceptionPacket(GearmanPacket packet, A att, GearmanCompletionHandler<A> callback);
+	public void sendExceptionPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback);
 			
 	/**
 	 * Sends packets to the client asynchronously.<br>
@@ -154,7 +155,7 @@ interface ServerClient {
 	 * @param packet
 	 * 		The exception packet to send to the client
 	 */
-	public <A> void sendPacket(GearmanPacket packet, A att, GearmanCompletionHandler<A> callback);
+	public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback);
 	
 	/**
 	 * Set's the client's ID

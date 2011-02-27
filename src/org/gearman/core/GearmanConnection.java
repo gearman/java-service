@@ -3,6 +3,17 @@ package org.gearman.core;
 import java.io.IOException;
 
 public interface GearmanConnection<X> {
+	public static enum SendCallbackResult implements GearmanCallbackResult{
+		SEND_SUCCESSFUL,
+		SEND_FAILED,
+		SERVICE_SHUTDOWN;
+
+		@Override
+		public boolean isSuccessful() {
+			return this.equals(SEND_SUCCESSFUL);
+		}
+	}
+	
 	/**
 	 * A user may want to attach an object to maintain the state of communication. 
 	 * @param obj
@@ -17,15 +28,7 @@ public interface GearmanConnection<X> {
 	 */
 	public X getAttachment();
 	
-	/**
-	 * Sends a GearmanPacket to the server.  
-	 * 
-	 * @param packet
-	 * 		The packet to be sent
-	 * @throws IOException
-	 * 		Thrown if any I/O errors occur.
-	 */
-	public <A> void sendPacket(GearmanPacket packet, A attachment, GearmanCompletionHandler<A> callback);
+	public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket,SendCallbackResult> callback);
 	
 	public int getPort();
 	public int getLocalPort();

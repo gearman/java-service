@@ -3,8 +3,10 @@
 	<classpathentry kind="src" path="dbg"/>
 	<classpathentry kind="src" path="examples"/>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="tests"/>
 	<classpathentry kind="lib" path="jgasp-0.0.1.jar"/>
 	<classpathentry kind="lib" path="nioReactor-0.0.4.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

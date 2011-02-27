@@ -4,9 +4,10 @@ public interface GearmanJobStatus {
 	public static enum OperationResult {
 		SUCCESS,
 		SERVER_NOT_AVAILABLE,
-		OPERATION_REQUEST_FAILED,
-		OPERATION_TIMED_OUT,
-		OPERATION_INTERRUPTED;
+		SERVER_DROPPED,
+		CONNECTION_FAILED,
+		SERVER_DISCONNECTED,
+		WORK_COMPLETE;
 		
 		public final boolean isSuccessful() {
 			return this.equals(SUCCESS);

@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.gearman.GearmanLostConnectionPolicy.Action;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
 
-public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?>> implements GearmanWorker {
+public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> implements GearmanWorker {
 	
 	private static final long HEARTBEAT_PERIOD = 20000000000L;
 	
@@ -23,7 +23,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		@Override
 		public void run() {
 			final long time = System.currentTimeMillis();
-			for(WorkerConnectionController<?> cc : WorkerImpl.super.getConnections().values()) {
+			for(WorkerConnectionController<?,?> cc : WorkerImpl.super.getConnections().values()) {
 				switch(cc.getState()) {
 				case CONNECTING:
 					// If connecting, nothing to do until a connection is established
@@ -45,7 +45,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		
 	}
 	
-	private class LocalConnectionController extends WorkerConnectionController<GearmanServer> {
+	private class LocalConnectionController extends WorkerConnectionController<GearmanServer, org.gearman.GearmanServer.ConnectCallbackResult> {
 		
 		LocalConnectionController(GearmanServer key) {
 			super(WorkerImpl.this, key);
@@ -63,7 +63,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 
 		@Override
 		protected void onConnect(ControllerState oldState) {
-			super.getKey().createGearmanConnection(this, null, this);
+			super.getKey().createGearmanConnection(this, this);
 		}
 
 		@Override
@@ -99,7 +99,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		protected void onWait(ControllerState oldState) { }
 	}
 	
-	private class RemoteConnectionController extends WorkerConnectionController<InetSocketAddress> {
+	private class RemoteConnectionController extends WorkerConnectionController<InetSocketAddress, org.gearman.core.GearmanConnectionManager.ConnectCallbackResult> {
 		
 		private final class Reconnector implements Runnable {
 			@Override
@@ -137,7 +137,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 
 		@Override
 		protected void onConnect(ControllerState oldState) {
-			gearman.getGearmanConnectionManager().createGearmanConnection(super.getKey(), this, null, this);
+			gearman.getGearmanConnectionManager().createGearmanConnection(super.getKey(), this, this);
 		}
 
 		@Override
@@ -207,12 +207,12 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 	}
 
 	@Override
-	protected WorkerConnectionController<?> createController(GearmanServer key) {
+	protected WorkerConnectionController<?,?> createController(GearmanServer key) {
 		return new LocalConnectionController(key);
 	}
 
 	@Override
-	protected WorkerConnectionController<?> createController(InetSocketAddress key) {
+	protected WorkerConnectionController<?,?> createController(InetSocketAddress key) {
 		return new RemoteConnectionController(key);
 	}
 
@@ -241,7 +241,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 			this.isConnected = true;
 			
 			this.future = this.gearman.getPool().scheduleAtFixedRate(this.heartbeat, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD, TimeUnit.NANOSECONDS);
-			for(WorkerConnectionController<?> w : super.getConnections().values()) {
+			for(WorkerConnectionController<?,?> w : super.getConnections().values()) {
 				w.openServer(false);
 			}
 			
@@ -280,11 +280,11 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 			if(this.funcMap.isEmpty()) {
 				this.isConnected = false;
 				if(this.future!=null) future.cancel(false);
-				for(WorkerConnectionController<?> conn : super.getConnections().values()) {
+				for(WorkerConnectionController<?,?> conn : super.getConnections().values()) {
 					conn.closeServer();
 				}
 			} else {
-				for(WorkerConnectionController<?> conn : super.getConnections().values()) {
+				for(WorkerConnectionController<?,?> conn : super.getConnections().values()) {
 					conn.cantDo(functionName);
 				}
 			}
@@ -306,7 +306,7 @@ public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController
 		 */
 		
 		synchronized(this.funcMap) {
-			for(WorkerConnectionController<?> conn : super.getConnections().values()) {
+			for(WorkerConnectionController<?,?> conn : super.getConnections().values()) {
 				conn.closeServer();
 			}
 			this.funcMap.clear();

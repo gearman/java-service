@@ -7,8 +7,8 @@ import org.gearman.Gearman;
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
-import org.gearman.GearmanClient.SubmitHandler;
-import org.gearman.GearmanClient.SubmitResult;
+import org.gearman.GearmanClient.SubmitCallbackResult;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConstants;
 
 public class EchoClient {
@@ -40,9 +40,9 @@ public class EchoClient {
 		 * Define an asynchronous callback handler. The callback handler will tell the user if the
 		 * job was successfully submitted to a job server or if it failed
 		 */
-		final SubmitHandler handler = new SubmitHandler() {
+		final GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback = new GearmanCallbackHandler<GearmanJob, SubmitCallbackResult>() {
 			@Override
-			public void onSubmissionComplete(GearmanJob job, SubmitResult result) {
+			public void onComplete(GearmanJob job, SubmitCallbackResult result) {
 				
 				// If the job was successfully submitted, then we just return
 				if(result.isSuccessful()) return;
@@ -116,7 +116,7 @@ public class EchoClient {
 		/*
 		 * Submit the GearmanJob
 		 */
-		client.submitJob(job, handler);
+		client.submitJob(job, callback);
 		
 	} // exit main thread
 }

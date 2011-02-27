@@ -6,9 +6,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.core.GearmanPacket.Magic;
 import org.gearman.core.GearmanPacket.Type;
 import org.gearman.util.ByteArray;
@@ -144,7 +145,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		assert packet!=null;
 		
 		for(ServerClient client : this.clients) {
-			client.sendExceptionPacket(packet, null ,null/*TODO*/);
+			client.sendExceptionPacket(packet,null/*TODO*/);
 		}
 	}
 
@@ -153,7 +154,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		assert packet!=null;
 		
 		for(ServerClient client : this.clients) {
-			client.sendPacket(packet, null,null/*TODO*/);
+			client.sendPacket(packet, null/*TODO*/);
 		}
 	}
 
@@ -177,7 +178,7 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		for(ServerClient client : this.clients) {
 			boolean t = client.removeDisconnectListener(this);
 			assert t;
-			client.sendPacket(packet,null,null /*TODO*/);
+			client.sendPacket(packet,null /*TODO*/);
 		}
 		this.clients.clear();
 		
@@ -235,13 +236,12 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		
 		worker.addDisconnectListener(this);
 		
-		worker.sendPacket(this.createJobAssignPacket(), null, new GearmanCompletionHandler<Object>(){
+		worker.sendPacket(this.createJobAssignPacket(), new GearmanCallbackHandler<GearmanPacket, org.gearman.core.GearmanConnection.SendCallbackResult>(){
 			@Override
-			public void onComplete(Object attachment) {}
-			@Override
-			public void onFail(Throwable exc, Object attachment) {
-				ServerJobAbstract.this.queue();
-			}
+			public void onComplete(GearmanPacket data, SendCallbackResult result) {
+				if(!result.isSuccessful()) 
+					ServerJobAbstract.this.queue();
+			}			 
 		});
 	}
 	
@@ -250,17 +250,16 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 		this.worker = worker;
 		this.state = JobState.WORKING;
 		
-		//TODO does not send UniqueID
-		worker.sendPacket(this.createJobAssignPacket(), null, new GearmanCompletionHandler<Object>(){
-			@Override
-			public void onComplete(Object attachment) {}
-			@Override
-			public void onFail(Throwable exc, Object attachment) {
-				ServerJobAbstract.this.queue();
-			}
-		});
-		
 		worker.addDisconnectListener(this);
+		
+		//TODO does not send UniqueID
+		worker.sendPacket(this.createJobAssignPacket(), new GearmanCallbackHandler<GearmanPacket, org.gearman.core.GearmanConnection.SendCallbackResult>(){
+			@Override
+			public void onComplete(GearmanPacket data, SendCallbackResult result) {
+				if(!result.isSuccessful()) 
+					ServerJobAbstract.this.queue();
+			}			 
+		});
 	}
 	
 	protected abstract void onComplete(JobState prevState);

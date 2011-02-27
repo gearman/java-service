@@ -4,10 +4,11 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
 import org.gearman.util.ConcurrentHashSet;
 
@@ -138,7 +139,7 @@ class ServerClientImpl implements ServerClient{
 			if(func.grabJob(this))
 				return;
 		}
-		this.conn.sendPacket(GearmanPacket.NO_JOB, null ,null /*TODO*/);
+		this.conn.sendPacket(GearmanPacket.NO_JOB, null  /*TODO*/);
 	}
 	
 	@Override
@@ -147,7 +148,7 @@ class ServerClientImpl implements ServerClient{
 			if(func.grabJob(this))
 				return;
 		}
-		this.conn.sendPacket(GearmanPacket.NO_JOB, null ,null /*TODO*/);
+		this.conn.sendPacket(GearmanPacket.NO_JOB, null  /*TODO*/);
 	}
 
 	@Override
@@ -166,7 +167,7 @@ class ServerClientImpl implements ServerClient{
 			if(!isSleeping) return;
 			this.isSleeping=false;
 			
-			this.conn.sendPacket(GearmanPacket.NOOP, null ,null /*TODO*/);
+			this.conn.sendPacket(GearmanPacket.NOOP, null  /*TODO*/);
 		}
 	}	
 	
@@ -180,15 +181,15 @@ class ServerClientImpl implements ServerClient{
 	}
 	
 	@Override
-	public <A> void sendExceptionPacket(GearmanPacket packet, A att, GearmanCompletionHandler<A> callback) {
+	public void sendExceptionPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
 		assert packet.getPacketType().equals(GearmanPacket.Type.WORK_EXCEPTION);
 		if(this.isForwardsExceptions)
-			this.conn.sendPacket(packet, att, callback);
+			this.conn.sendPacket(packet, callback);
 	}
 	
 	@Override
-	public <A> void sendPacket(GearmanPacket packet, A att, GearmanCompletionHandler<A> callback) {
-		this.conn.sendPacket(packet, att ,callback);
+	public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
+		this.conn.sendPacket(packet, callback);
 	}
 	
 	@Override

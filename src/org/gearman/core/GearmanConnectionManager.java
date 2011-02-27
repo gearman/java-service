@@ -8,12 +8,21 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.gearman.core.GearmanConnection.SendCallbackResult;
+
 import nioReactor.core.ExceptionHandler;
 import nioReactor.core.Reactor;
 import nioReactor.core.Socket;
 import nioReactor.core.SocketHandler;
 
 public class GearmanConnectionManager {
+	
+	public enum ConnectCallbackResult implements GearmanCallbackResult {
+		CONNECTION_FAILED;
+		
+		@Override
+		public boolean isSuccessful() { return false; }
+	}
 	
 	private final Reactor reactor;
 	
@@ -37,20 +46,22 @@ public class GearmanConnectionManager {
 		this.reactor.openPort(port, sHandler);
 	}
 	
-	public final <X,A> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, final A attachment, final GearmanFailureHandler<A> failHandler) {
-		final SocketHandler<SocketHandlerImpl<X,Integer>.Connection> sHandler = new SocketHandlerImpl<X,Integer>(handler, new StandardCodec());
-		final FailWrapper<A,IOException> w = new FailWrapper<A,IOException>(attachment,failHandler);
-		this.reactor.openSocket(adrs, sHandler , w);
+	public final <X> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback) {
+		this.createGearmanConnection(adrs, handler, new StandardCodec(), failCallback);
 	}
 	
-	public final <X,Y,A> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, final GearmanCodec<Y> codec, final A attachment, final GearmanFailureHandler<A> failHandler) {
+	public final <X,Y> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, final GearmanCodec<Y> codec, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback) {
 		final SocketHandler<SocketHandlerImpl<X,Y>.Connection> sHandler = new SocketHandlerImpl<X,Y>(handler, codec);
-		final FailWrapper<A,IOException> w = new FailWrapper<A,IOException>(attachment,failHandler);
-		this.reactor.openSocket(adrs, sHandler, w);
+		final ConnectWrapper cw = new ConnectWrapper(adrs,failCallback);
+		this.reactor.openSocket(adrs, sHandler, cw);
 	}
 	
 	public final void shutdown() {
 		this.reactor.shutdown();
+	}
+	
+	public final boolean isShutdown() {
+		return this.reactor.isShutdown();
 	}
 	
 	public final boolean closePort(final int port) {
@@ -150,17 +161,6 @@ public class GearmanConnectionManager {
 			}
 
 			@Override
-			public <A> void sendPacket(final GearmanPacket packet, final A attachment, final GearmanCompletionHandler<A> callback) {
-				// TODO System.out.println("["+this.getHostAddress()+":"+this.getPort()+"] : OUT :"+packet.getPacketType()); //TODO delete line
-				
-				final byte[] data = SocketHandlerImpl.this.codec.encode(packet);
-				
-				final CompleteWrapper<A, IOException> w = new  CompleteWrapper<A, IOException>(attachment,callback);
-				
-				this.socket.write(data,w,w);
-			}
-
-			@Override
 			public final void setAttachment(final X att) {
 				this.connAtt = att;
 			}
@@ -200,6 +200,13 @@ public class GearmanConnectionManager {
 			public boolean isClosed() {
 				return socket.isClosed();
 			}
+
+			@Override
+			public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
+				final byte[] data = SocketHandlerImpl.this.codec.encode(packet);
+				final CompleteWrapper2 wrapper = new CompleteWrapper2(packet,callback);
+				this.socket.write(data,wrapper,wrapper);
+			}
 		}
 	}
 	
@@ -207,48 +214,46 @@ public class GearmanConnectionManager {
 	 * TODO Fix the nioReactor project to better support the GearmanCompletionHandler 
 	 * @author isaiah
 	 *
-	 * @param <A>
-	 * @param <Z>
 	 */
-	private static final class CompleteWrapper<A,Z extends Exception> implements Runnable, ExceptionHandler<Z>{
-		private final A att;
-		private final GearmanCompletionHandler<A> handler;
+	private static final class CompleteWrapper2 implements Runnable, ExceptionHandler<IOException> {
+
+		private final GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback;
+		private final GearmanPacket packet;
 		
-		public CompleteWrapper(A att, GearmanCompletionHandler<A> handler) {
-			this.att = att;
-			this.handler = handler;
+		public CompleteWrapper2(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
+			this.packet = packet;
+			this.callback = callback;
 		}
 		
 		@Override
 		public void run() {
-			if(handler!=null)handler.onComplete(att);
+			if(this.callback!=null)
+				this.callback.onComplete(packet, SendCallbackResult.SEND_SUCCESSFUL);
 		}
-	
+
 		@Override
-		public void onException(Z exception) {
-			if(handler!=null)handler.onFail(exception, att);
+		public void onException(IOException exception) {
+			if(this.callback!=null)
+				this.callback.onComplete(packet, SendCallbackResult.SEND_FAILED);
 		}
+		
 	}
 	
 	/**
 	 * TODO Fix the nioReactor project to better support the GearmanCompletionHandler 
 	 * @author isaiah
-	 *
-	 * @param <A>
-	 * @param <Z>
 	 */
-	private static final class FailWrapper<A,Z extends Exception> implements ExceptionHandler<Z>{
-		private final A att;
-		private final GearmanFailureHandler<A> handler;
-
-		public FailWrapper(A att, GearmanFailureHandler<A> handler) {
-			this.att = att;
-			this.handler = handler;
-		}
+	private static final class ConnectWrapper implements ExceptionHandler<IOException>{
+		GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback;
+		InetSocketAddress adrs;
 		
+		public ConnectWrapper(InetSocketAddress adrs, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback) {
+			this.adrs = adrs;
+			this.failCallback = failCallback;
+		}
 		@Override
-		public void onException(Z exception) {
-			if(handler!=null)handler.onFail(exception, att);				
+		public void onException(IOException exception) {
+			this.failCallback.onComplete(adrs, ConnectCallbackResult.CONNECTION_FAILED);
 		}
 	}
 }

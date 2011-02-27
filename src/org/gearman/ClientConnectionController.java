@@ -2,15 +2,16 @@ package org.gearman;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.gearman.GearmanClient.SubmitResult;
+import org.gearman.GearmanClient.SubmitCallbackResult;
 import org.gearman.GearmanJob.Priority;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
+import org.gearman.core.GearmanCallbackResult;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
 import org.gearman.util.ByteArray;
 
-abstract class ClientConnectionController <K> extends ConnectionController<K> {
+abstract class ClientConnectionController <K, C extends GearmanCallbackResult> extends ConnectionController<K, C> {
 	
 	private static final int RESPONCE_TIMEOUT = 19000;
 	private static final int IDLE_TIMEOUT = 9000;
@@ -77,26 +78,26 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 		if(jobSub.isBackground) {
 			switch(p) {
 			case LOW_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW_BG(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			case HIGH_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH_BG(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			case NORMAL_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_BG(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			}
 		} else {
 		
 			switch(p) {
 			case LOW_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW(funcName, uID, data), null/*TODO*/);
 				break;
 			case HIGH_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH(funcName, uID, data), null/*TODO*/);
 				break;
 			case NORMAL_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB(funcName, uID, data), null, null/*TODO*/);
+				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB(funcName, uID, data), null/*TODO*/);
 				break;
 			}
 		}
@@ -260,7 +261,7 @@ abstract class ClientConnectionController <K> extends ConnectionController<K> {
 			this.pendingJob = null;
 		}
 		
-		jobSub.onSubmissionComplete(SubmitResult.SUBMIT_SUCCESSFUL);
+		jobSub.onSubmissionComplete(SubmitCallbackResult.SUBMIT_SUCCESSFUL);
 		
 		if(!jobSub.isBackground) {
 			final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));

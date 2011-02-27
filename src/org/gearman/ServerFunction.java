@@ -73,7 +73,7 @@ class ServerFunction {
 				// If creator is specified, add creator to listener set and send JOB_CREATED packet
 				if(creator!=null) {
 					job.addClient(creator);
-					creator.sendPacket(job.createJobCreatedPacket(), null ,null /*TODO*/);
+					creator.sendPacket(job.createJobCreatedPacket(), null /*TODO*/);
 				}
 				
 				return;
@@ -92,7 +92,7 @@ class ServerFunction {
 			if(this.maxQueueSize>0) {
 				synchronized (this.jobSet) {
 					if(maxQueueSize>0 && maxQueueSize<=jobSet.size()) {
-						creator.sendPacket(ServerStaticPackets.ERROR_QUEUE_FULL,null,null);
+						creator.sendPacket(ServerStaticPackets.ERROR_QUEUE_FULL,null);
 						return;
 					}
 					
@@ -112,7 +112,7 @@ class ServerFunction {
 			 * JOB_CREATED is sent 
 			 */
 			if(creator!=null) {
-				creator.sendPacket(job.createJobCreatedPacket(), null ,null /*TODO*/);
+				creator.sendPacket(job.createJobCreatedPacket(), null /*TODO*/);
 			}
 			
 			/*

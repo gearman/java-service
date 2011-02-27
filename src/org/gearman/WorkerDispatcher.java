@@ -31,7 +31,7 @@ class WorkerDispatcher {
 	 * The dispatch queue holds all {@link WorkerConnectionController} objects awaiting
 	 * the okay to grab a job
 	 */
-	private final Queue<WorkerConnectionController<?>> dispatch = new LinkedBlockingQueue<WorkerConnectionController<?>>();
+	private final Queue<WorkerConnectionController<?,?>> dispatch = new LinkedBlockingQueue<WorkerConnectionController<?,?>>();
 
 	/**
 	 * Returns the maximum number of jobs that are allowed to be executed
@@ -84,7 +84,7 @@ class WorkerDispatcher {
 	 * @param cc
 	 *            The {@link WorkerConnectionController}
 	 */
-	public final void drop(final WorkerConnectionController<?> cc) {
+	public final void drop(final WorkerConnectionController<?,?> cc) {
 		this.dispatch.remove(cc);
 	}
 	
@@ -95,7 +95,7 @@ class WorkerDispatcher {
 	 * @param cc
 	 *            The given {@link WorkerConnectionController}
 	 */
-	public final void grab(final WorkerConnectionController<?> cc) {
+	public final void grab(final WorkerConnectionController<?,?> cc) {
 
 		// If two or more ConnectionControllers end up in the queue,
 		// there is an error in logic
@@ -116,7 +116,7 @@ class WorkerDispatcher {
 		// The number of available threads should decide the number of GRAB_JOB
 		// packets can be dispatched at any one time. This loop enforces that.
 
-		WorkerConnectionController<?> cc;
+		WorkerConnectionController<?,?> cc;
 		for (; count < this.maxCount && !dispatch.isEmpty(); count++) {
 			cc = dispatch.remove();
 			if (cc != null) 

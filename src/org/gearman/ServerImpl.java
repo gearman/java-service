@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Set;
 
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanCodec;
-import org.gearman.core.GearmanCompletionHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
-import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
 import org.gearman.util.ConcurrentHashSet;
@@ -41,13 +40,14 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		return this.gearman.getGearmanConnectionManager().closePort(port);
 	}
 
+
 	@Override
-	public <A1,A2> void createGearmanConnection(GearmanConnectionHandler<A1> handler, A2 att, GearmanFailureHandler<A2> failHandler) {
+	public <A> void createGearmanConnection(GearmanConnectionHandler<A> handler, GearmanCallbackHandler<GearmanServer, ConnectCallbackResult> failHandler) {
 		if(this.isShutdown()) {
-			failHandler.onFail(new IOException("Closed Server"), att);
+			failHandler.onComplete(this, ConnectCallbackResult.SERVER_SHUTDOWN);
 			return;
 		}
-		new LocalConnection<ServerClient,A1>(this,handler);
+		new LocalConnection<ServerClient,A>(this,handler);
 	}
 
 	@Override
@@ -174,18 +174,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 			return -1;
 		}
 
-		@Override
-		public <A> void sendPacket(GearmanPacket packet, A attachment, GearmanCompletionHandler<A> callback) {
-			if(this.isClosed) {
-				if(callback!=null)
-					callback.onFail(new IOException("GearmanConnection Closed"), attachment);
-				return;
-			}
-			
-			this.peer.handler.onPacketReceived(packet, peer);
-			if(callback!=null) callback.onComplete(attachment);
-		}
-
+		
 		@Override
 		public final X getAttachment() {
 			return att;
@@ -205,6 +194,20 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		public boolean isClosed() {
 			return this.isClosed;
 		}
+
+		@Override
+		public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, org.gearman.core.GearmanConnection.SendCallbackResult> callback) {
+			// TODO Auto-generated method stub
+			if(this.isClosed) {
+				if(callback!=null)
+					callback.onComplete(packet, SendCallbackResult.SERVICE_SHUTDOWN);
+				return;
+			}
+			
+			this.peer.handler.onPacketReceived(packet, peer);
+			if(callback!=null) callback.onComplete(packet, SendCallbackResult.SEND_SUCCESSFUL);
+		}
+
 	}
 	
 	
