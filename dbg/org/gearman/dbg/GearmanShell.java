@@ -16,11 +16,13 @@ import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.gearman.core.GearmanCompletionHandler;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanConnectionManager;
-import org.gearman.core.GearmanFailureHandler;
 import org.gearman.core.GearmanConstants;
+import org.gearman.core.GearmanPacket;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
+import org.gearman.core.GearmanConnectionManager.ConnectCallbackResult;
 
 import com.googlecode.jgasp.ArgumentParser;
 
@@ -62,12 +64,14 @@ public class GearmanShell {
 	}
 	
 	private GearmanShell(InetSocketAddress adrs) throws IOException {
-		this.gcm.createGearmanConnection(adrs, new Handler(), null ,new GearmanFailureHandler<Object>(){
+		this.gcm.createGearmanConnection(adrs, new Handler() ,new GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult>(){
+			
 			@Override
-			public void onFail(Throwable exc, Object attachment) {
-				System.out.println(exc);
-				GearmanShell.this.gcm.shutdown();
-			}
+			public void onComplete(InetSocketAddress data, ConnectCallbackResult result) {
+				if(result.isSuccessful())return;
+				
+				System.out.println(result);
+				GearmanShell.this.gcm.shutdown();			}
 		});
 	}
 	
@@ -309,14 +313,12 @@ public class GearmanShell {
 			
 			log.log(Level.INFO, "Sending Packet:\n"+this.packetToString(packet));
 			
-			this.client.sendPacket(packet, null, new GearmanCompletionHandler<Object>(){
+			this.client.sendPacket(packet, new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>(){
+
 				@Override
-				public void onComplete(Object attachment) {
-					// TODO Auto-generated method stub
-				}
-				@Override
-				public void onFail(Throwable exc, Object attachment) {
-					log.log(Level.WARNING, "Sending Packet Failed: " + exc.getMessage());
+				public void onComplete(GearmanPacket data, SendCallbackResult result) {
+					if(!result.isSuccessful())
+						log.log(Level.WARNING, "Sending Packet Failed: " + result);
 				}
 				
 			});
