@@ -84,7 +84,7 @@ class WorkerJob extends GearmanJob {
 		assert jobHandle!=null;
 		
 		if(result.isSuccessful()) {
-			conn.sendPacket(GearmanPacket.createWORK_COMPLETE(Magic.REQ, jobHandle.getBytes(), result.getResultData()),null /*TODO*/);
+			conn.sendPacket(GearmanPacket.createWORK_COMPLETE(Magic.REQ, jobHandle.getBytes(), result.getData()),null /*TODO*/);
 		} else {
 			conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ, jobHandle.getBytes()),null /*TODO*/);
 		}

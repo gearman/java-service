@@ -3,6 +3,8 @@ package echo;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import static org.gearman.GearmanJobResult.workSuccessful;
+
 import org.gearman.Gearman;
 import org.gearman.GearmanFunction;
 import org.gearman.GearmanJob;
@@ -76,7 +78,7 @@ public class EchoWorker implements GearmanFunction {
 		System.out.println("Echo: "+new String(job.getJobData()));
 		
 		// Return data to send back to client
-		return GearmanJobResult.workSuccessful(job.getJobData());
+		return workSuccessful(job.getJobData());
 	}
 
 }

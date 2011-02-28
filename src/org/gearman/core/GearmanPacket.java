@@ -163,6 +163,8 @@ public final class GearmanPacket {
 		return new GearmanPacket(Magic.REQ, Type.GET_STATUS, jobHandle);
 	}
 	
+	
+	
 	private static final int HEADER_SIZE = 12;
 	
 	private Magic magic;

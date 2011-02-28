@@ -6,17 +6,20 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import org.gearman.GearmanJobStatus.OperationResult;
+import org.gearman.GearmanJobStatus.StatusCallbackResult;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
 import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanCallbackResult;
 import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanPacket;
+import org.gearman.core.GearmanVariables;
+import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
 
 /**
@@ -91,7 +94,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		private ScheduledFuture<?> future;
 		private Closer closer;
 		
-		private HashMap<ByteArray, InnerJobStatus> pendingJobStatus; 
+		private HashMap<ByteArray, JobStatus> pendingJobStatus; 
 		
 		private final Object lock = new Object();
 		
@@ -100,6 +103,27 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			this.sc = sc;
 		}
 		
+		public void onStatusReceived(GearmanPacket packet) {
+			final byte[] b_jobHandle	= packet.getArgumentData(0);
+			final byte[] b_isKnown		= packet.getArgumentData(1);
+			final byte[] b_isRunning	= packet.getArgumentData(2);
+			final byte[] b_numerator	= packet.getArgumentData(3);
+			final byte[] b_denominator	= packet.getArgumentData(4);
+			
+			final ByteArray jobHandle	= new ByteArray(b_jobHandle);
+			final boolean isKnown		= b_isKnown.length>0 ? (b_isKnown[0]=='1'?true:false):false;
+			final boolean isRunning		= b_isRunning.length>0 ? (b_isRunning[0]=='1'? true: false) : false;
+				
+			long numerator;
+			try { numerator = Long.parseLong(new String(b_numerator, GearmanVariables.UTF_8)); }
+			catch (NumberFormatException e) { numerator = 0;}
+			
+			long denominator;
+			try { denominator = Long.parseLong(new String(b_denominator, GearmanVariables.UTF_8));}
+			catch (NumberFormatException e) { denominator = 0;}
+			
+			this.completeJobStatus(StatusCallbackResult.SUCCESS, jobHandle, isKnown, isRunning, numerator, denominator);
+		}
 		
 		public final boolean isConnecting(){
 			return this.state.equals(ControllerState.CONNECTING);
@@ -147,6 +171,21 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 						this.conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null);
 					}
 					
+					if(this.pendingJobStatus!=null && !this.pendingJobStatus.isEmpty()) {
+						
+						for(Entry<ByteArray, JobStatus> status : this.pendingJobStatus.entrySet()) {
+							final ByteArray jobHandle = status.getKey();
+							this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+								@Override
+								public void onComplete(GearmanPacket data, SendCallbackResult result) {
+									if(!result.isSuccessful()) {
+										ConnectionController.this.completeJobStatus(StatusCallbackResult.SEND_FAILED, jobHandle, false, false, 0L, 0L);
+									}
+								}
+							});
+						}
+					}
+					
 				} else {
 					
 					// If not in the CONNECTING state when a connection is accepted, then the
@@ -169,8 +208,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				if(!this.isOpen() && !this.isClosePending()) return;
 				
 				if(this.pendingJobStatus!=null) {
-					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
-						jobStatus.fail(OperationResult.SERVER_DISCONNECTED);
+					for(JobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.complete(StatusCallbackResult.SERVER_DISCONNECTED, false, false, 0, 0);
 					}
 					
 					this.pendingJobStatus.clear();
@@ -183,16 +222,18 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			}
 		}
 		
+		@Override
 		public void onComplete(K data, C result) {
+			// Connection failed callback handler 
 			
-		}
-		public final void onFail(final Throwable exc, final Object attachment) {
+			assert !result.isSuccessful();
+			
 			synchronized(this.lock) {
 				assert this.conn==null;
 				
 				if(this.pendingJobStatus!=null) {
-					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
-						jobStatus.fail(OperationResult.CONNECTION_FAILED);
+					for(JobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.complete(StatusCallbackResult.CONNECTION_FAILED,false,false,0,0);
 					}
 					
 					this.pendingJobStatus.clear();
@@ -410,8 +451,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 				}
 				
 				if(this.pendingJobStatus!=null) {
-					for(InnerJobStatus jobStatus : this.pendingJobStatus.values()) {
-						jobStatus.fail(OperationResult.SERVER_DROPPED);
+					for(JobStatus jobStatus : this.pendingJobStatus.values()) {
+						jobStatus.complete(StatusCallbackResult.SERVER_DROPPED, false, false, 0, 0);
 					}
 					
 					this.pendingJobStatus.clear();
@@ -431,64 +472,43 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		protected abstract void onLostConnection(GearmanLostConnectionPolicy policy, Grounds grounds);
 		
-		public final JobStatus getStatus(final ByteArray jobHandle) {
-			
-			final InnerJobStatus jobStatus = new InnerJobStatus(jobHandle);
+		public final void getStatus(final ByteArray jobHandle, final JobStatus jobStatus) {
 			
 			synchronized(this.lock) {
+				if(this.isDropped()) return;
+				
 				if(this.pendingJobStatus==null)
-					this.pendingJobStatus = new HashMap<ByteArray,InnerJobStatus>();
+					this.pendingJobStatus = new HashMap<ByteArray,JobStatus>();
 				
 				this.pendingJobStatus.put(jobHandle, jobStatus);
 				
-				if(!this.isOpen()) this.openServer(true);
-	
-				return jobStatus;
+				if(!(this.isOpen() || this.isClosePending())) {
+					this.openServer(true);
+				} else {
+					assert this.conn!=null && !this.conn.isClosed();
+					this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+						@Override
+						public void onComplete(GearmanPacket data, SendCallbackResult result) {
+							if(!result.isSuccessful()) {
+								ConnectionController.this.completeJobStatus(StatusCallbackResult.SEND_FAILED, jobHandle, false, false, 0L, 0L);
+							}
+						}
+					});
+				}
 			}
-			
 		}
 		
-		private final boolean removeJobStatus(ByteArray jobHandle) {
+		
+		private final void completeJobStatus(StatusCallbackResult result ,ByteArray jobHandle, boolean isKnown, boolean isRunning, long numerator, long denominator) {
 			synchronized(this.lock) {
-				final boolean value = this.pendingJobStatus.remove(jobHandle)!=null;
+				final JobStatus status = this.pendingJobStatus.remove(jobHandle);
 				
 				if(this.pendingJobStatus.isEmpty() && this.isClosePending()) {
 					this.pendingJobStatus = null;
 					this.closeServer();
 				}
 				
-				return value;
-			}
-		}
-
-		private final class InnerJobStatus extends JobStatus {
-			private final ByteArray jobHandle; 
-			
-			public InnerJobStatus(ByteArray jobHandle) {
-				this.jobHandle = jobHandle;
-			}
-			
-			@Override
-			public final boolean cancel(boolean arg) {
-				boolean value = super.cancel(arg);
-				ConnectionController.this.removeJobStatus(jobHandle);
-
-				return value;
-			}
-			
-			@Override
-			public final void complete(final OperationResult opResult, boolean isKnown, final boolean isRunning, final long numerator, final long denominator) {
-				super.complete(opResult, isKnown, isRunning, numerator, denominator);
-				ConnectionController.this.removeJobStatus(jobHandle);
-			}
-
-			public void fail(OperationResult or) {
-				/*
-				 *  If a server is dropped while there are pending job_status operations, there is
-				 *  no need to remove it from the data structure. Object deconstruction is done in
-				 *  that method 
-				 */
-				super.complete(or, false, false, 0, 0);
+				status.complete(result, isKnown, isRunning, numerator, denominator);
 			}
 		}
 		

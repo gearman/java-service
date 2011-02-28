@@ -7,8 +7,8 @@ import org.gearman.Gearman;
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
+import org.gearman.GearmanClient.SubmitCallbackHandler;
 import org.gearman.GearmanClient.SubmitCallbackResult;
-import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConstants;
 
 public class EchoClient {
@@ -40,15 +40,15 @@ public class EchoClient {
 		 * Define an asynchronous callback handler. The callback handler will tell the user if the
 		 * job was successfully submitted to a job server or if it failed
 		 */
-		final GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback = new GearmanCallbackHandler<GearmanJob, SubmitCallbackResult>() {
+		final SubmitCallbackHandler callback = new SubmitCallbackHandler() {
 			@Override
 			public void onComplete(GearmanJob job, SubmitCallbackResult result) {
 				
-				// If the job was successfully submitted, then we just return
+				// If the submit was successfully submitted, then we just return
 				if(result.isSuccessful()) return;
 				
 				/*
-				 *  If the job failed to submit, print an error and close the gearman
+				 *  If the submit failed to submit, print an error and close the gearman
 				 *  instance, and allow the application to shutdown
 				 */
 				System.err.println("job submission failed: "+result);
@@ -75,8 +75,8 @@ public class EchoClient {
 			@Override
 			public void callbackData(byte[] data) {
 				/*
-				 *  This method is used to send intermediate data from the worker to the
-				 *  client while the job is executing.  
+				 * This method is used to send intermediate data from the worker to the
+				 * client while the job is executing.  
 				 */
 				
 				// No data sent on the data callback channel in the echo function
@@ -101,7 +101,7 @@ public class EchoClient {
 				// If the job was successful
 				if(result.isSuccessful()) {
 					// If the job was successful, print the returned string
-					System.out.println(new String(result.getResultData(),GearmanConstants.UTF_8));
+					System.out.println(new String(result.getData(),GearmanConstants.UTF_8));
 				} else {
 					// If the job failed, print that it failed.  A job may fail for a few resins,
 					// but the most likely would be due to failing to send this job to a job server

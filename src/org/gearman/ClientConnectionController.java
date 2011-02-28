@@ -127,7 +127,7 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 			error(packet);
 			break;
 		case STATUS_RES:
-			//TODO
+			super.onStatusReceived(packet);
 			break;
 		case WORK_EXCEPTION:
 			//workException(packet);  //TODO Don't implement yet
@@ -159,12 +159,10 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		final byte[] warning = packet.getArgumentData(1);
 		try {
 			this.getGearman().getPool().execute(new Runnable() {
-
 				@Override
 				public void run() {
 					job.callbackWarning(warning);
 				}
-				
 			});
 		} catch (Throwable t) {
 			// If the user throws an exception, catch it, print it, and continue.
@@ -265,6 +263,7 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		
 		if(!jobSub.isBackground) {
 			final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
+			jobSub.job.setConnection(this, jobHandle);
 			this.jobs.put(jobHandle, jobSub.job);
 		}
 		

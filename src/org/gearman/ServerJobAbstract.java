@@ -15,7 +15,11 @@ import org.gearman.core.GearmanPacket.Type;
 import org.gearman.util.ByteArray;
 
 abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectListener {
-
+	
+	private static final byte[] STATUS_TRUE = new byte[]{'1'};
+	private static final byte[] STATUS_FALSE = new byte[]{'0'};
+	
+	
 	/** 
 	 * Global Job Map
 	 * key = job handle
@@ -100,13 +104,8 @@ abstract class ServerJobAbstract implements ServerJob, ServerClientDisconnectLis
 	
 	@Override
 	public final GearmanPacket createStatusResPacket() {
-		final byte[] isRunning;
-		if(this.state.equals(JobState.WORKING))
-			isRunning = new byte[]{1};
-		else 
-			isRunning = new byte[]{0};
-		
-		return new GearmanPacket(Magic.RES, Type.STATUS_RES,this.jobHandle.getBytes(),new byte[]{1},isRunning,numerator, denominator);
+		final byte[] isRunning = this.state.equals(JobState.WORKING)? STATUS_TRUE: STATUS_FALSE;
+		return new GearmanPacket(Magic.RES, Type.STATUS_RES,this.jobHandle.getBytes(),STATUS_TRUE,isRunning,numerator==null?STATUS_FALSE:numerator, denominator==null?STATUS_FALSE:denominator);
 	}
 
 

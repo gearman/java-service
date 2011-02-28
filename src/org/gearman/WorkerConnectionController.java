@@ -191,6 +191,9 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 		case NO_JOB:
 			noJob(conn);
 			return;
+		case STATUS_RES:
+			super.onStatusReceived(packet);
+			break;
 		case ECHO_RES:
 			// not implemented
 			return;

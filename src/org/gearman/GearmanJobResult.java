@@ -1,25 +1,36 @@
 package org.gearman;
 
-public class GearmanJobResult {
+import org.gearman.core.GearmanCallbackResult;
+
+public class GearmanJobResult implements GearmanCallbackResult {
+		
+	static final GearmanJobResult WORKER_FAIL = new GearmanJobResult(null, JobCallbackResult.WORKER_FAIL);
+	static final GearmanJobResult SUBMISSION_FAIL = new GearmanJobResult(null, JobCallbackResult.SUBMISSION_FAIL);
+	static final GearmanJobResult DISCONNECT_FAIL = new GearmanJobResult(null, JobCallbackResult.DISCONNECT_FAIL);
+	static final GearmanJobResult SUCCESS = new GearmanJobResult(null, JobCallbackResult.SUCCESSFUL);
 	
-	static final GearmanJobResult WORKER_FAIL = new GearmanJobResult(null, Type.WORKER_FAIL);
-	static final GearmanJobResult SUBMISSION_FAIL = new GearmanJobResult(null, Type.SUBMISSION_FAIL);
-	static final GearmanJobResult DISCONNECT_FAIL = new GearmanJobResult(null, Type.DISCONNECT_FAIL);
-	static final GearmanJobResult SUCCESS = new GearmanJobResult(null, Type.SUCCESSFUL);
+	public enum JobCallbackResult implements GearmanCallbackResult {
+		SUCCESSFUL,
+		DISCONNECT_FAIL,
+		SUBMISSION_FAIL,
+		WORKER_FAIL;
+
+		@Override
+		public boolean isSuccessful() {
+			return this.equals(SUCCESSFUL);
+		}
+	}
 	
-	public enum Type {SUCCESSFUL, DISCONNECT_FAIL, SUBMISSION_FAIL, WORKER_FAIL}
+	private final byte[] data;
+	private final JobCallbackResult status;
 	
-	private final byte[] resultData;
-	private final Type resultStatus;
-	
-	
-	GearmanJobResult (final byte[] resultData, final Type resultStatus) {
-		this.resultData = resultData;
-		this.resultStatus = resultStatus;
+	GearmanJobResult (final byte[] resultData, final JobCallbackResult resultStatus) {
+		this.data = resultData;
+		this.status = resultStatus;
 	}
 	
 	public static final GearmanJobResult workSuccessful(final byte[] data) {
-		return new GearmanJobResult(data, Type.SUCCESSFUL);
+		return new GearmanJobResult(data, JobCallbackResult.SUCCESSFUL);
 	}
 	
 	public static final GearmanJobResult workSuccessful() {
@@ -31,14 +42,14 @@ public class GearmanJobResult {
 	}
 	
 	public boolean isSuccessful() {
-		return resultStatus.equals(Type.SUCCESSFUL);
+		return this.status.isSuccessful();
 	}
 	
-	public Type getResultType() {
-		return resultStatus;
+	public JobCallbackResult getJobCallbackResult() {
+		return status;
 	}
 	
-	public byte[] getResultData() {
-		return this.resultData;
+	public byte[] getData() {
+		return this.data;
 	}
 }

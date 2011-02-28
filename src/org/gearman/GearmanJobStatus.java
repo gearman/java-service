@@ -1,21 +1,27 @@
 package org.gearman;
 
+import org.gearman.core.GearmanCallbackResult;
+
 public interface GearmanJobStatus {
-	public static enum OperationResult {
+	public static enum StatusCallbackResult implements GearmanCallbackResult {
 		SUCCESS,
 		SERVER_NOT_AVAILABLE,
 		SERVER_DROPPED,
 		CONNECTION_FAILED,
 		SERVER_DISCONNECTED,
-		WORK_COMPLETE;
-		
-		public final boolean isSuccessful() {
+		WORK_COMPLETE,
+		SEND_FAILED;
+
+		@Override
+		public boolean isSuccessful() {
 			return this.equals(SUCCESS);
 		}
 	}
-	
-	public boolean isOperationSuccessful();
-	public OperationResult getOperationResult();
+
+	public interface StatusResult extends GearmanCallbackResult {		
+		public GearmanJobStatus getGearmanJobStatus();
+		public StatusCallbackResult getStatusCallbackResult();
+	}
 	
 	/**
 	 * Tests if the server knew the status of the job in question.

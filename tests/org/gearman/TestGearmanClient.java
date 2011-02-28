@@ -58,7 +58,7 @@ public class TestGearmanClient {
 	}
 
 	@Test
-	public void testAddServerGearmanServer() throws IOException {
+	public void testAddServerGearmanServer() throws IOException {		
 	}
 
 	@Test

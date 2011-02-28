@@ -1,119 +1,82 @@
 package org.gearman;
 
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import org.gearman.GearmanJobStatus.StatusResult;
+import org.gearman.core.GearmanCallbackHandler;
 
-class JobStatus implements GearmanJobStatus, Future<GearmanJobStatus> {
+class JobStatus implements GearmanJobStatus, StatusResult {
 
 	public static final long OP_TIMEOUT = 20000;
 	
-	private OperationResult	opResult	= null;
+	private StatusCallbackResult result;
 	
-	private boolean		isCanceled	= false;
+	private GearmanCallbackHandler<GearmanJob, StatusResult> callback;
+	private GearmanJob job;
+	
 	private boolean		isKnown		= false;
 	private boolean		isRunning	= false;
 	private long		numerator	= 0L;
 	private long		denominator	= 0L;
 	
-	@Override
-	public final boolean isOperationSuccessful() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
-		return this.opResult.isSuccessful();
-	}
-	
-	@Override
-	public final OperationResult getOperationResult() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
-		return this.opResult;
+	public JobStatus(GearmanJob job, GearmanCallbackHandler<GearmanJob, StatusResult> callback) {
+		this.job = job;
+		this.callback = callback;
 	}
 	
 	@Override
 	public final long getDenominator() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
 		return this.denominator;
 	}
 
 	@Override
 	public final long getNumerator() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
 		return this.numerator;
 	}
 
 	@Override
 	public final boolean isKnown() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
 		return this.isKnown;
 	}
 
 	@Override
 	public final boolean isRunning() {
-		if(!this.isDone()) throw new IllegalStateException("should not be called until result is set");
 		return this.isRunning;
 	}
 
-	protected synchronized void complete(final OperationResult opResult, boolean isKnown, final boolean isRunning, final long numerator, final long denominator) {
-		if(opResult.isSuccessful()) {
-			this.isKnown = isKnown;
-			this.isRunning = isRunning;
-			this.numerator = numerator;
-			this.denominator = denominator;
-		}
+	protected synchronized void complete(StatusCallbackResult result, boolean isKnown, final boolean isRunning, final long numerator, final long denominator) {
+		this.result = result;
 		
-		this.notifyAll();
-	}
-	
-	@Override
-	public final boolean isDone() {
-		return this.opResult!=null;
-	}
-	
-	@Override
-	public synchronized boolean cancel(boolean arg0) {
-		if(this.isDone()) 
-			return false;
+		this.isKnown = isKnown;
+		this.isRunning = isRunning;
+		this.numerator = numerator;
+		this.denominator = denominator;
 		
-		this.isCanceled = true;
-		this.notifyAll();
-		return true;
+		final GearmanCallbackHandler<GearmanJob, StatusResult> callback = this.callback;
+		final GearmanJob job = this.job;
+		
+		this.callback = null;
+		this.job = null;
+		
+		callback.onComplete(job, this);
 	}
 
 	@Override
-	public final synchronized GearmanJobStatus get() throws InterruptedException, ExecutionException {
-		if(this.isCanceled) {
-			throw new CancellationException("Operation Cancelled");
-		} if(!this.isDone()) {
-			this.wait();
-			
-			if(this.isCanceled)
-				throw new CancellationException("Operation Cancelled");
-			
-			// If the operation was not canceled, we should be able to assume it's complete 
-			assert this.isDone();
-		}
-		return this;
+	public GearmanJobStatus getGearmanJobStatus() {
+		// This method should not be accessible to the user until after the result is defined.
+		assert this.result!=null;		
+		return this.result.isSuccessful()? this: null;
 	}
 
 	@Override
-	public final synchronized GearmanJobStatus get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-		if(this.isCanceled) {
-			throw new CancellationException("Operation Cancelled");
-		} else if (!this.isDone()) {
-			unit.timedWait(this, timeout);
-			
-			if(this.isCanceled)
-				throw new CancellationException("Operation Cancelled");
-			if(!this.isDone())
-				throw new TimeoutException();
-		}
-		
-		return this;
+	public StatusCallbackResult getStatusCallbackResult() {
+		// This method should not be accessible to the user until after the result is defined.
+		assert this.result!=null;
+		return result;
 	}
 
 	@Override
-	public final boolean isCancelled() {
-		return this.isCanceled;
+	public boolean isSuccessful() {
+		// This method should not be accessible to the user until after the result is defined.
+		assert this.result!=null;
+		return this.result.isSuccessful();
 	}
 }

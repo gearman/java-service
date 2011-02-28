@@ -51,5 +51,7 @@ public interface GearmanClient extends GearmanJobServerPool {
 		
 	}
 	
-	public void submitJob(GearmanJob job, GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback);
+	public interface SubmitCallbackHandler extends GearmanCallbackHandler<GearmanJob, SubmitCallbackResult>{}
+	
+	public void submitJob(GearmanJob job, SubmitCallbackHandler callback);
 }

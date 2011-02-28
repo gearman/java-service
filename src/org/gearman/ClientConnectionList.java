@@ -42,6 +42,21 @@ class ClientConnectionList <V, K> {
 		return false;
 	}
 	
+	public final synchronized void clear() {
+		Node current = head;
+		while(current!=null) {
+			Node n = current;
+			current = current.next;
+			
+			n.failKey	= null;
+			n.next		= null;
+			n.prev		= null;
+		}
+		
+		head = null;
+		tail = null;
+	}
+	
 	public final synchronized boolean add(final V value) {
 		final Node node = new Node(value);
 		

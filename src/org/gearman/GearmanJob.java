@@ -2,10 +2,11 @@ package org.gearman;
 
 import java.lang.ref.WeakReference;
 import java.util.UUID;
-import java.util.concurrent.Future;
 
-import org.gearman.GearmanJobStatus.OperationResult;
+import org.gearman.GearmanJobStatus.StatusCallbackResult;
+import org.gearman.GearmanJobStatus.StatusResult;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
+import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConnection;
 import org.gearman.util.ByteArray;
 
@@ -326,7 +327,7 @@ public abstract class GearmanJob {
 	/**
 	 * The onComplete method is triggered when the {@link GearmanJobResult} becomes
 	 * available.
-	 *   
+	 * 
 	 * @param result
 	 * 		The result from executing this GearmanJob
 	 */
@@ -379,37 +380,36 @@ public abstract class GearmanJob {
 		return this.result;
 	}
 	
-	/**
-	 * Queries the job server about this job's status. 
-	 */
-	public final Future<GearmanJobStatus> getStatus() {
+	public interface JobStatusCallbackHandler extends GearmanCallbackHandler<GearmanJob, StatusResult> {
 		
+	}
+	
+	public final void getStatus(JobStatusCallbackHandler callback) {
 		if(this.isComplete()) {
-			// The job has completed and therefore will not be available in the job server
-			JobStatus status = new JobStatus();
-			status.complete(OperationResult.WORK_COMPLETE, false, false, 0, 0);
-			
-			return status;
+			callback.onComplete(this, new StatusResult() {
+				public GearmanJobStatus getGearmanJobStatus() { return null; }
+				public StatusCallbackResult getStatusCallbackResult() { return StatusCallbackResult.WORK_COMPLETE; }
+				public boolean isSuccessful() { return false; }
+			});
+			return;
 		}
 		
 		// Get the connection controller that is handling this server
 		final ConnectionController<?,?> cc = this.connection==null? null: this.connection.get();
 		
 		if(cc==null) {
-			//No connection is available
-			JobStatus status = new JobStatus();
-			status.complete(OperationResult.SERVER_NOT_AVAILABLE, false, false, 0, 0);
-			
-			return status;
+			callback.onComplete(this, new StatusResult() {
+				public GearmanJobStatus getGearmanJobStatus() { return null; }
+				public StatusCallbackResult getStatusCallbackResult() { return StatusCallbackResult.SERVER_NOT_AVAILABLE; }
+				public boolean isSuccessful() { return false; }
+			});
+			return;
 		}
 		
 		// If the connection is defined, then the job handle should be defined
 		assert this.jobHandle != null;
 		
 		// Get the controller get the status. This method returns a GearmanJobStatus/Future object 
-		final JobStatus jobStatus = cc.getStatus(this.getJobHandle());
-		
-		// return the job status as a Future object
-		return jobStatus;
+		cc.getStatus(this.getJobHandle(), new JobStatus(this, callback));
 	}
 }

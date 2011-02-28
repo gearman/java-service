@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.gearman.GearmanLostConnectionPolicy.Action;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
-import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanCallbackResult;
 
 class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionController<?,?>> implements GearmanClient {
@@ -218,7 +217,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	}
 
 	@Override
-	public void submitJob(GearmanJob job, GearmanCallbackHandler<GearmanJob, SubmitCallbackResult> callback) {
+	public void submitJob(GearmanJob job, SubmitCallbackHandler callback) {
 		if(this.isShutdown()) {
 			if(callback!=null)
 				callback.onComplete(job,SubmitCallbackResult.FAILED_TO_SHUTDOWN);
@@ -452,6 +451,19 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			assert this.open.contains(icc);
 			
 			this.open.remove(icc);
+		}
+	}
+	
+	@Override
+	public final void shutdown() {
+		synchronized(this.open) {
+			for(ClientJobSubmission jobSub : this.jobQueue){
+				jobSub.onSubmissionComplete(SubmitCallbackResult.FAILED_TO_SHUTDOWN);
+			}
+			this.open.clear();
+			this.available.clear();
+			
+			super.shutdown();
 		}
 	}
 }
