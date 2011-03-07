@@ -134,7 +134,7 @@ public class GearmanConnectionManager {
 		@Override
 		public final void onRead(final Integer bytes, final Socket<Connection> socket) {			
 			assert socket.getAttachment()!=null;
-			this.codec.decode(socket.getAttachment());
+			this.codec.decode(socket.getAttachment(), bytes);
 		}
 		
 		private final class Connection implements GearmanConnection<X>, GearmanCodecChannel<Y> {

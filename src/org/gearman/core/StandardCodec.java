@@ -28,7 +28,7 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 	}
 
 	@Override
-	public final void decode(final GearmanCodecChannel<Integer> channel) {
+	public final void decode(final GearmanCodecChannel<Integer> channel, final int byteCount) {
 		
 		switch(channel.getCodecAttachement()) {
 		case FORMAT:
