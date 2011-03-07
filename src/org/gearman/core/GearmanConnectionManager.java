@@ -2,29 +2,31 @@ package org.gearman.core;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.channels.CompletionHandler;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.gearman.core.GearmanConnection.SendCallbackResult;
-
-import nioReactor.core.ExceptionHandler;
-import nioReactor.core.Reactor;
-import nioReactor.core.Socket;
-import nioReactor.core.SocketHandler;
+import org.gearman.reactor.NioReactor;
+import org.gearman.reactor.SocketHandler;
+import org.gearman.reactor.Socket;
 
 public class GearmanConnectionManager {
 	
 	public enum ConnectCallbackResult implements GearmanCallbackResult {
+		SUCCESS,
+		SERVICE_SHUTDOWN,
 		CONNECTION_FAILED;
 		
 		@Override
-		public boolean isSuccessful() { return false; }
+		public boolean isSuccessful() {
+			return this.equals(SUCCESS);
+		}
 	}
 	
-	private final Reactor reactor;
+	private final NioReactor reactor;
 	
 	public GearmanConnectionManager() throws IOException {
 		this(Executors.newCachedThreadPool());
@@ -33,7 +35,7 @@ public class GearmanConnectionManager {
 	public GearmanConnectionManager(final ExecutorService executor) throws IOException {
 		if(executor==null) throw new IllegalArgumentException("executor is null");
 		
-		this.reactor = new Reactor(1, executor);
+		this.reactor = new NioReactor(executor);
 	}
 	
 	public final <X> void openPort(final int port, final GearmanConnectionHandler<X> handler) throws IOException {
@@ -50,10 +52,9 @@ public class GearmanConnectionManager {
 		this.createGearmanConnection(adrs, handler, new StandardCodec(), failCallback);
 	}
 	
-	public final <X,Y> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, final GearmanCodec<Y> codec, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback) {
+	public final <X,Y> void createGearmanConnection(final InetSocketAddress adrs, final GearmanConnectionHandler<X> handler, final GearmanCodec<Y> codec, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> callback) {
 		final SocketHandler<SocketHandlerImpl<X,Y>.Connection> sHandler = new SocketHandlerImpl<X,Y>(handler, codec);
-		final ConnectWrapper cw = new ConnectWrapper(adrs,failCallback);
-		this.reactor.openSocket(adrs, sHandler, cw);
+		this.reactor.openSocket(adrs, sHandler, callback);
 	}
 	
 	public final void shutdown() {
@@ -65,11 +66,15 @@ public class GearmanConnectionManager {
 	}
 	
 	public final boolean closePort(final int port) {
-		return this.reactor.closePort(port);
+		try {
+			return this.reactor.closePort(port);
+		} catch (IOException e) {
+			return false;
+		}
 	}
 	
-	public final void closeAllPorts() {
-		this.reactor.closeAllPorts();
+	public final void closePorts() {
+		this.reactor.closePorts();
 	}
 	
 	public final Set<Integer> getOpenPorts() {
@@ -101,10 +106,14 @@ public class GearmanConnectionManager {
 			try {
 				socket.setTcpNoDelay(true);
 				socket.setKeepAlive(true);
-				socket.setSoLinger(true, 1000);
 				
-				socket.setAttachment(new Connection(socket));
-			} catch (SocketException e) {
+				final Connection conn = new Connection(socket);		// may result in closed socket
+				socket.setAttachment(conn);
+				
+				if(socket.isClosed()) {
+					this.handler.onDisconnect(conn);
+				}
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -114,7 +123,8 @@ public class GearmanConnectionManager {
 		public final void onDisconnect(final Socket<Connection> socket) {
 			
 			final Connection conn = socket.getAttachment();
-			assert conn!=null;
+			if(socket.isClosed())
+				return;
 			
 			this.handler.onDisconnect(conn);
 			conn.codecAtt=null;
@@ -122,7 +132,7 @@ public class GearmanConnectionManager {
 		}
 
 		@Override
-		public final void onRead(final Socket<Connection> socket) {			
+		public final void onRead(final Integer bytes, final Socket<Connection> socket) {			
 			assert socket.getAttachment()!=null;
 			this.codec.decode(socket.getAttachment());
 		}
@@ -205,7 +215,7 @@ public class GearmanConnectionManager {
 			public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
 				final byte[] data = SocketHandlerImpl.this.codec.encode(packet);
 				final CompleteWrapper2 wrapper = new CompleteWrapper2(packet,callback);
-				this.socket.write(data,wrapper,wrapper);
+				this.socket.write(ByteBuffer.wrap(data), null ,wrapper);
 			}
 		}
 	}
@@ -215,8 +225,8 @@ public class GearmanConnectionManager {
 	 * @author isaiah
 	 *
 	 */
-	private static final class CompleteWrapper2 implements Runnable, ExceptionHandler<IOException> {
-
+	private static final class CompleteWrapper2 implements CompletionHandler<ByteBuffer, Void> {
+		
 		private final GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback;
 		private final GearmanPacket packet;
 		
@@ -224,36 +234,18 @@ public class GearmanConnectionManager {
 			this.packet = packet;
 			this.callback = callback;
 		}
-		
+
 		@Override
-		public void run() {
+		public void completed(ByteBuffer result, Void attachment) {
 			if(this.callback!=null)
 				this.callback.onComplete(packet, SendCallbackResult.SEND_SUCCESSFUL);
 		}
 
 		@Override
-		public void onException(IOException exception) {
+		public void failed(Throwable exc, Void attachment) {
 			if(this.callback!=null)
 				this.callback.onComplete(packet, SendCallbackResult.SEND_FAILED);
 		}
 		
-	}
-	
-	/**
-	 * TODO Fix the nioReactor project to better support the GearmanCompletionHandler 
-	 * @author isaiah
-	 */
-	private static final class ConnectWrapper implements ExceptionHandler<IOException>{
-		GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback;
-		InetSocketAddress adrs;
-		
-		public ConnectWrapper(InetSocketAddress adrs, GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult> failCallback) {
-			this.adrs = adrs;
-			this.failCallback = failCallback;
-		}
-		@Override
-		public void onException(IOException exception) {
-			this.failCallback.onComplete(adrs, ConnectCallbackResult.CONNECTION_FAILED);
-		}
 	}
 }

@@ -50,7 +50,7 @@ public class GearmanMockServer implements GearmanConnectionHandler<Object>, Gear
 
 	@Override
 	public final void closeAllPorts() {
-		man.closeAllPorts();
+		man.closePorts();
 	}
 
 	@Override

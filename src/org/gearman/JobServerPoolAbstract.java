@@ -226,7 +226,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		public void onComplete(K data, C result) {
 			// Connection failed callback handler 
 			
-			assert !result.isSuccessful();
+			if(result.isSuccessful()) return;
 			
 			synchronized(this.lock) {
 				assert this.conn==null;
