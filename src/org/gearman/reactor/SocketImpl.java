@@ -180,6 +180,12 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 		
 		// Attachment is null
 		
+		// An IOException is sometimes thrown when the server suddenly disconnects
+		if(exc instanceof IOException) {
+			this.closeConnection();
+			return;
+		}
+		
 		// None of the thrown exceptions should ever be thrown
 		// TODO log error
 		assert false;

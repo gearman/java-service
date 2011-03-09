@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.gearman.GearmanLostConnectionPolicy.Action;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
 
-public class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> implements GearmanWorker {
+class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> implements GearmanWorker {
 	
 	private static final long HEARTBEAT_PERIOD = 20000000000L;
 	

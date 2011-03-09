@@ -4,8 +4,6 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
-import org.gearman.core.GearmanConnection;
-import org.gearman.dbg.GearmanMockServer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

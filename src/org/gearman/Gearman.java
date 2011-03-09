@@ -36,7 +36,6 @@ public final class Gearman implements GearmanService {
 		
 		this.pool = s;
 		
-		
 		this.gcm = new GearmanConnectionManager(this.pool);
 	}
 		

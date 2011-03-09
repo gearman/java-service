@@ -23,8 +23,7 @@ import org.gearman.core.GearmanConstants;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.core.GearmanConnectionManager.ConnectCallbackResult;
-
-import com.googlecode.jgasp.ArgumentParser;
+import org.gearman.util.ArgumentParser;
 
 /**
  * The GearmanShell will allow users to interact with the server using command

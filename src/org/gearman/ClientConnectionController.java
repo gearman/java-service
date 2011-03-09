@@ -1,5 +1,6 @@
 package org.gearman;
 
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.gearman.GearmanClient.SubmitCallbackResult;
@@ -43,7 +44,10 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 			this.pendingJob = null;
 		}
 		
-		for(GearmanJob job : this.jobs.values()) {
+		Iterator<GearmanJob> it = this.jobs.values().iterator();
+		while(it.hasNext()) {
+			GearmanJob job = it.next();
+			it.remove();
 			job.setResult(GearmanJobResult.DISCONNECT_FAIL);
 		}
 		

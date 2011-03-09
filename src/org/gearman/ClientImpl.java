@@ -217,7 +217,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	}
 
 	@Override
-	public void submitJob(GearmanJob job, SubmitCallbackHandler callback) {
+	public void submitJob(GearmanJob job, GearmanSubmitHandler callback) {
 		if(this.isShutdown()) {
 			if(callback!=null)
 				callback.onComplete(job,SubmitCallbackResult.FAILED_TO_SHUTDOWN);

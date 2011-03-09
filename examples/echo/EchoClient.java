@@ -7,7 +7,7 @@ import org.gearman.Gearman;
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJob;
 import org.gearman.GearmanJobResult;
-import org.gearman.GearmanClient.SubmitCallbackHandler;
+import org.gearman.GearmanClient.GearmanSubmitHandler;
 import org.gearman.GearmanClient.SubmitCallbackResult;
 import org.gearman.core.GearmanConstants;
 
@@ -40,7 +40,7 @@ public class EchoClient {
 		 * Define an asynchronous callback handler. The callback handler will tell the user if the
 		 * job was successfully submitted to a job server or if it failed
 		 */
-		final SubmitCallbackHandler callback = new SubmitCallbackHandler() {
+		final GearmanSubmitHandler callback = new GearmanSubmitHandler() {
 			@Override
 			public void onComplete(GearmanJob job, SubmitCallbackResult result) {
 				
@@ -51,7 +51,7 @@ public class EchoClient {
 				 *  If the submit failed to submit, print an error and close the gearman
 				 *  instance, and allow the application to shutdown
 				 */
-				System.err.println("job submission failed: "+result);
+				System.err.println("job submission failed: "+result.name());
 				gearman.shutdown();
 			}
 		};
@@ -105,7 +105,7 @@ public class EchoClient {
 				} else {
 					// If the job failed, print that it failed.  A job may fail for a few resins,
 					// but the most likely would be due to failing to send this job to a job server
-					System.err.println("Job execution failed");
+					System.err.println("Job execution failed: "+result.getJobCallbackResult().name());
 				}
 				
 				// We're done, shutdown

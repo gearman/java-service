@@ -25,6 +25,7 @@ import org.gearman.core.GearmanConstants;
  * @author isaiah
  */
 public class EchoWorker implements GearmanFunction {
+	static int i = 0;
 	
 	/**
 	 * sets up a {@link GearmanWorker} to use the defined {@link GearmanFunction} to
@@ -73,9 +74,10 @@ public class EchoWorker implements GearmanFunction {
 	 */
 	@Override
 	public GearmanJobResult work(GearmanJob job) {
+		System.out.println(i++);
 		
 		// Print the string
-		System.out.println("Echo: "+new String(job.getJobData()));
+		//System.out.println("Echo: "+new String(job.getJobData()));
 		
 		// Return data to send back to client
 		return workSuccessful(job.getJobData());

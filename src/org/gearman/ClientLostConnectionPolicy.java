@@ -2,7 +2,7 @@ package org.gearman;
 
 import java.net.InetSocketAddress;
 
-public class ClientLostConnectionPolicy implements GearmanLostConnectionPolicy {
+class ClientLostConnectionPolicy implements GearmanLostConnectionPolicy {
 	@Override
 	public void lostLocalServer(GearmanServer server, GearmanJobServerPool service, Grounds grounds) {
 		// TODO Auto-generated method stub

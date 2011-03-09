@@ -27,7 +27,7 @@
     </description>
 	
 	<!-- project name -->
-	<property name="project" value="gearman" />
+	<property name="project" value="java-gearman-service" />
 	
 	<!-- current version number -->
 	<property name="version" value="0.0.1" />
@@ -40,24 +40,18 @@
 	
 	<!-- Javadoc home directory -->
 	<property name="javadoc" location="javadoc" />
-	
-	<!-- Javadoc directory. Developer's documentation -->
-	<property name="javadoc-dev" location="${javadoc}/${project}/${version}/dev" />
-	
-	<!-- Javadoc directoy. User's documentation -->
-	<property name="javadoc-api" location="${javadoc}/${project}/${version}/api" />
 
     <!-- Builds the executable jar, creates javadocs, and zips source -->
 	<target name="build-all">
     	<antcall target="jar" />
-    	<antcall target="zip-src" />
-		<antcall target="zip-javadoc" />
+	<antcall target="javadoc" />
     </target>
 	
 	<!-- Builds the project's executable jar -->
 	<target name="jar" depends="build" description="Builds the project's executable jar">
 		<jar destfile="${basedir}/${project}-${version}.jar" >
 			<fileset dir="${build}" />
+			<fileset dir="${src}" />
 			<fileset file="License.txt" />
 			<manifest>
 				<attribute name="Main-Class" value="org.gearman.Main"/>
@@ -65,24 +59,12 @@
 		</jar>
     </target>
 	
-	<!-- Creates a zip of the project's source code -->
-	<target name="zip-src" description="Creates a zip of the source code">
-		<zip destfile="${basedir}/${project}-${version}-src.zip" basedir="${src}" update="true" />
-	</target>
-	
 	<!-- Creates the javadocs -->
 	<target name="javadoc">
-		<mkdir dir="${javadoc-dev}"/>
-		<mkdir dir="${javadoc-api}"/>
-		<javadoc destdir="${javadoc-dev}" sourcepath="${src}" packagenames="org.gearman" private="true"/>
-		<javadoc destdir="${javadoc-api}" sourcepath="${src}" packagenames="org.gearman" />
+		<mkdir dir="${javadoc}"/>
+		<javadoc destdir="${javadoc}" sourcepath="${src}" packagenames="org.gearman/*" />
 	</target>
-	
-	<target name="zip-javadoc" depends="javadoc">
-		<zip destfile="${basedir}/${project}-${version}-devdoc.zip" basedir="${javadoc-dev}" update="true" />
-		<zip destfile="${basedir}/${project}-${version}-apidoc.zip" basedir="${javadoc-api}" update="true" />
-	</target>
-	
+
 	<target name="test">
 		<!-- TODO -->
 	</target>
