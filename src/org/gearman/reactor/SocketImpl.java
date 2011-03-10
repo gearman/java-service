@@ -8,8 +8,8 @@ import java.net.StandardSocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
+import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Object> {
 	
@@ -36,7 +36,7 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 		this.handler = handler;
 		this.buffer = handler.createSocketBuffer();
 		
-		writters = new LinkedBlockingQueue<Writter<?>>();
+		writters = new LinkedList<Writter<?>>();
 	}
 	
 	@Override
@@ -128,27 +128,29 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 
 	@Override
 	public <A2> void write(ByteBuffer data, A2 att, CompletionHandler<ByteBuffer, A2> callback) {
-		this.writters.add(new Writter<A2>(data, att, callback));
-		
 		synchronized(this.writters) {
+			this.writters.add(new Writter<A2>(data, att, callback));
+			
 			if(this.isWriting) return;
-			this.isWriting = true;
+			this.isWriting=true;
 		}
-		
 		this.writeNext();
 	}
 	
 	private final void writeNext() {
 		assert this.isWriting;
-		final Writter<?> writter = this.writters.poll();;
 		
+		final Writter<?> writter;
 		synchronized(this.writters) {
+			writter = this.writters.poll();;
+			
 			if(writter==null) {
 				this.isWriting = false;
 				if(this.isClosed && this.writters.isEmpty())
 					this.closeConnection();
 				return;
-			}
+			}	
+			this.isWriting=true;
 		}
 		writter.write();
 	}

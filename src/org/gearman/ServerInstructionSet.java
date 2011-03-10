@@ -492,7 +492,6 @@ final class ServerInstructionSet {
 		} else {
 			
 			// Construct a WORK_COMPLETE response packet 
-			packet.setMagic(Magic.RES);	
 			job.workComplete(packet);
 		}
 	}

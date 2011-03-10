@@ -136,8 +136,9 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 			try {
 				final GearmanJobResult result = func.work(job);
 				job.setResult(result==null? GearmanJobResult.workSuccessful(): result);
-			} catch(Exception e) {
-				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ,jobHandle),null /*TODO*/);
+			} catch(Throwable e) {
+				//TODO
+				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ,jobHandle),null );
 			}
 			
 		} finally {

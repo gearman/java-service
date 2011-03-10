@@ -106,7 +106,7 @@ class ServerFunction {
 			
 			
 			/* 
-			 * The JOB_CREATED packet must execute before the job is added to the queue.
+			 * The JOB_CREATED packet must sent before the job is added to the queue.
 			 * Queuing the job before sending the packet may result in another thread
 			 * grabbing, completing and sending a WORK_COMPLETE packet before the
 			 * JOB_CREATED is sent 
@@ -133,13 +133,9 @@ class ServerFunction {
 	
 	public final boolean grabJob(final ServerClient worker) {
 		
-		final Job job;
-
-			job = this.queue.poll();
+		final Job job = this.queue.poll();
 		
-		if(job==null) {
-			return false;
-		}
+		if(job==null) return false;
 		
 		job.work(worker);
 		return true;
