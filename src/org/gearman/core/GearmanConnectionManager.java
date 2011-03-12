@@ -34,7 +34,6 @@ public class GearmanConnectionManager {
 	
 	public GearmanConnectionManager(final ExecutorService executor) throws IOException {
 		if(executor==null) throw new IllegalArgumentException("executor is null");
-		
 		this.reactor = new NioReactor(executor);
 	}
 	

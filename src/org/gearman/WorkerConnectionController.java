@@ -106,7 +106,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	}
 	
 	private final void jobAssign(final GearmanPacket packet, final GearmanConnection<?> conn) {
-		
+		this.grabTimeout = Long.MAX_VALUE;
 		this.toDispatcher();
 		
 		try {
@@ -148,7 +148,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	}
 	
 	private final void noJob(final GearmanConnection<?> conn) {
-				
+		// Received a response. Set the 
 		this.grabTimeout = Long.MAX_VALUE;
 		this.noopTimeout = System.currentTimeMillis();
 		
