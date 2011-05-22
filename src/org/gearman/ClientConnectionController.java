@@ -1,7 +1,9 @@
 package org.gearman;
 
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.gearman.GearmanClient.SubmitCallbackResult;
 import org.gearman.GearmanJob.Priority;
@@ -16,6 +18,9 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 	
 	private static final int RESPONCE_TIMEOUT = 19000;
 	private static final int IDLE_TIMEOUT = 9000;
+	
+	private Queue<Runnable> multiplexTasks = new LinkedBlockingQueue<Runnable>();
+	private boolean isMultiplexing = false;
 	
 	/**
 	 * The set of executing jobs. The key is the job's handle and the value is the job itself
@@ -161,17 +166,21 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		}
 		
 		final byte[] warning = packet.getArgumentData(1);
-		try {
-			this.getGearman().getPool().execute(new Runnable() {
-				@Override
-				public void run() {
+		Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				try {
 					job.callbackWarning(warning);
+				} catch (Throwable t) {
+					// If the user throws an exception, catch it, print it, and continue.
+					t.printStackTrace();
+				} finally {
+					taskNext();
 				}
-			});
-		} catch (Throwable t) {
-			// If the user throws an exception, catch it, print it, and continue.
-			t.printStackTrace();
-		}
+			}
+		};
+		
+		taskAdd(task);
 	}
 	
 	private final void workData(final GearmanPacket packet) {
@@ -184,19 +193,20 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		}
 		
 		final byte[] data= packet.getArgumentData(1);
-		try {
-			this.getGearman().getPool().execute(new Runnable() {
-
-				@Override
-				public void run() {
+		Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				try {
 					job.callbackData(data);
+				} catch (Throwable t) {
+					// If the user throws an exception, catch it, print it, and continue.
+					t.printStackTrace();
+				} finally {
+					taskNext();
 				}
-				
-			});
-		} catch (Throwable t) {
-			// If the user throws an exception, catch it, print it, and continue.
-			t.printStackTrace();
-		}
+			}
+		};
+		taskAdd(task);
 	}
 
 /*
@@ -235,19 +245,21 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 			return;
 		}
 		
-		try {
-			this.getGearman().getPool().execute(new Runnable() {
-
-				@Override
-				public void run() {
+		Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				try {
 					job.setResult(GearmanJobResult.WORKER_FAIL);
+				} catch (Throwable t) {
+					// If the user throws an exception, catch it, print it, and continue.
+					t.printStackTrace();
+				} finally {
+					taskNext();
 				}
-				
-			});
-		} catch (Throwable t) {
-			// If the user throws an exception, catch it, print it, and continue.
-			t.printStackTrace();
-		}
+			}
+		};
+		
+		taskAdd(task);
 	}
 	
 	private final void jobCreated(final GearmanPacket packet) {
@@ -275,8 +287,9 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 	}
 	
 	private final void workStatus(final GearmanPacket packet) {
+		
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJob job = this.jobs.get(jobHandle);
+		final GearmanJob job = ClientConnectionController.this.jobs.get(jobHandle);
 		
 		if(job==null) {
 			// TODO log warning
@@ -287,19 +300,52 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 			final long numerator = Long.parseLong(new String(packet.getArgumentData(1),GearmanConstants.UTF_8));
 			final long denominator = Long.parseLong(new String(packet.getArgumentData(2),GearmanConstants.UTF_8));
 			
-			this.getGearman().getPool().execute(new Runnable() {
+			Runnable task = new Runnable() {
 
 				@Override
 				public void run() {
-					job.callbackStatus(numerator, denominator);
+					try {
+						job.callbackStatus(numerator, denominator);
+					} catch (Throwable t) {
+						// If the user throws an exception, catch it, print it, and continue.
+						t.printStackTrace();
+					} finally {
+						taskNext();
+					}
 				}
 				
-			});
+			};
+			
+			taskAdd(task);
 		} catch (NumberFormatException nfe) {
 			// TODO log error
 		}
 	}
 	
+	private final void taskAdd(Runnable task) {
+		synchronized(this.multiplexTasks) {
+			if(this.isMultiplexing)
+				this.multiplexTasks.add(task);
+			else {
+				this.isMultiplexing = true;
+				ClientConnectionController.this.getGearman().getPool().execute(task);
+			}
+		}
+	}
+	
+	private final void taskNext() {
+		
+		synchronized(this.multiplexTasks) {
+			Runnable task = this.multiplexTasks.poll();
+			if(task==null) {
+				this.isMultiplexing = false;
+				return;
+			} else {
+				ClientConnectionController.this.getGearman().getPool().execute(task);
+			}
+		}
+	}
+		
 	private final void workComplete(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
 
@@ -317,19 +363,21 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		}
 		
 		final byte[] data = packet.getArgumentData(1);
-		try {
-			this.getGearman().getPool().execute(new Runnable() {
-
-				@Override
-				public void run() {
+		Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				try {
 					job.setResult(GearmanJobResult.workSuccessful(data));
-				}
-				
-			});
-		} catch (Throwable t) {	
-			// If the user throws an exception, catch it, print it, and continue.
-			t.printStackTrace();
-		}
+				} catch (Throwable t) {
+					// If the user throws an exception, catch it, print it, and continue.
+					t.printStackTrace();
+				} finally {
+					taskNext();
+				} 
+			}
+			
+		};
+		taskAdd(task);
 	}
 	
 	private final void error(final GearmanPacket packet) {

@@ -241,6 +241,8 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	}
 	
 	private final void addJob(ClientJobSubmission job) {
+	
+		InnerConnectionController<?,?> conn = null;
 		
 		synchronized(this.open) {
 			
@@ -254,7 +256,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 				final InnerConnectionController<?,?> icc;
 				if ((icc = this.available.tryFirst(null))!=null){
 					// Make a connection
-					icc.openServer(false);					
+					conn = icc;
 				}
 				
 			} else {
@@ -265,14 +267,15 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 					this.jobQueue.addLast(job);
 					
 					// Make a connection
-					icc.openServer(false);
-					
+					conn = icc;
 				} else {
 					// No available servers to connect to, fail job
 					job.onSubmissionComplete(GearmanClient.SubmitCallbackResult.FAILED_TO_NO_SERVER);
 				}
 			}
 		}
+		
+		if(conn!=null) conn.openServer(false);
 	}
 	
 	private final void onConnectionOpen(final InnerConnectionController<?,?> icc) {
@@ -349,6 +352,8 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 		 * Move the connection controller from the open set to the available set
 		 */
 		
+		InnerConnectionController<?,?> openNext = null;
+		
 		synchronized(this.open) {
 			
 			// The controller should be in the open set
@@ -381,8 +386,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 						assert conn.getState().equals(ControllerState.CLOSED)
 							|| conn.getState().equals(ControllerState.CONNECTING);
 						
-						test = conn.openServer(false);
-						assert test;
+						openNext = conn;
 						
 					} else {
 						// If conn is null, then there are no other available connections
@@ -396,6 +400,11 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			 * connect to. Add it to the head of the list
 			 */
 			test= this.available.addFirst(icc);
+			assert test;
+		}
+		
+		if(openNext!=null) {
+			boolean test = openNext.openServer(false);
 			assert test;
 		}
 	}

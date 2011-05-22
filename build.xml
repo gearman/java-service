@@ -30,7 +30,7 @@
 	<property name="project" value="java-gearman-service" />
 	
 	<!-- current version number -->
-	<property name="version" value="0.1" />
+	<property name="version" value="0.2" />
 	
 	<!-- source directory -->
 	<property name="src" location="src" />
