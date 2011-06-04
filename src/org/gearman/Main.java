@@ -72,7 +72,7 @@ class Main {
 			System.err.println();
 			printHelp(System.err);
 		} else if(!arguments.isEmpty()) {
-			System.err.print("recived unexspected arguments:");
+			System.err.print("received unexpected arguments:");
 			for(String arg : arguments) {
 				System.err.print(" "+arg);
 			}
