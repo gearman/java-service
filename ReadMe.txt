@@ -8,6 +8,12 @@ to call functions between languages. It can be used in a variety of applications
 from high-availability web sites to the transport of database replication events. In 
 other words, it is the nervous system for how distributed processing communicates.
 
+
+~~~~~~~~~ 0.3 ~~~~~~~~~
+Issues Fixed:
+* Issue 6: An exception thrown due to some class renames in newer java 7 builds
+* Issue 7: An exception thrown when gearman packets over 1024 bytes are sent
+
 ~~~~~~~~~ 0.2 ~~~~~~~~~
 Issues Fixed:
 

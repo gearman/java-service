@@ -70,7 +70,7 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 	}
 	
 	private final void header(final GearmanCodecChannel<Integer> channel) {
-		final ByteBuffer buffer = channel.getBuffer();
+		ByteBuffer buffer = channel.getBuffer();
 		if(buffer.hasRemaining()) return;
 		
 		final int size = buffer.getInt(SIZE_POS);
@@ -89,7 +89,21 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 			
 			channel.onDecode(packet);
 		} else {
-			buffer.limit(HEADER_SIZE+size);
+			final int headerAndSize = HEADER_SIZE+size;
+			
+			if(headerAndSize>buffer.capacity()) {
+				// Grow Buffer
+				ByteBuffer newbuf = ByteBuffer.allocateDirect(headerAndSize);
+				
+				buffer.clear();
+				buffer.limit(HEADER_SIZE);
+				newbuf.put(buffer);
+			
+				channel.setBuffer(newbuf);
+				buffer = newbuf;
+			}
+			
+			buffer.limit(headerAndSize);
 			channel.setCodecAttachement(BODY);
 		}
 	}

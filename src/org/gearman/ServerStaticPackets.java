@@ -74,5 +74,5 @@ final class ServerStaticPackets {
 	public static final GearmanPacket TEXT_OK = GearmanPacket.createTEXT("OK");
 	public static final GearmanPacket TEXT_DONE = GearmanPacket.createTEXT(".");
 	public static final GearmanPacket TEXT_VERSION = GearmanPacket.createTEXT(
-			"Java Gearman Server v0.0.1");
+			"java-gearman-service v0.3");
 }

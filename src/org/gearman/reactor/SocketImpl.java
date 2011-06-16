@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.StandardSocketOption;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -64,7 +64,7 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 
 	@Override
 	public boolean getKeepAlive() throws IOException {
-		return this.socketChannel.getOption(StandardSocketOption.SO_KEEPALIVE);
+		return this.socketChannel.getOption(StandardSocketOptions.SO_KEEPALIVE);
 	}
 
 	@Override
@@ -98,7 +98,7 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 
 	@Override
 	public boolean getTcpNoDelay() throws IOException {
-		return this.socketChannel.getOption(StandardSocketOption.TCP_NODELAY);
+		return this.socketChannel.getOption(StandardSocketOptions.TCP_NODELAY);
 	}
 
 	@Override
@@ -118,12 +118,12 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 
 	@Override
 	public void setKeepAlive(boolean on) throws IOException {
-		this.socketChannel.setOption(StandardSocketOption.SO_KEEPALIVE, on);
+		this.socketChannel.setOption(StandardSocketOptions.SO_KEEPALIVE, on);
 	}
 
 	@Override
 	public void setTcpNoDelay(boolean on) throws IOException {
-		this.socketChannel.setOption(StandardSocketOption.TCP_NODELAY, on);
+		this.socketChannel.setOption(StandardSocketOptions.TCP_NODELAY, on);
 	}
 
 	@Override
