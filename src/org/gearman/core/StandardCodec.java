@@ -41,6 +41,8 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 			body(channel);
 			return;
 		case TEXT:
+			text(channel);
+			return;
 		default:
 			assert false;
 		}		
@@ -64,8 +66,8 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 			buffer.limit(HEADER_SIZE);
 			channel.setCodecAttachement(HEADER);
 		} else {
-			buffer.limit(2);
 			channel.setCodecAttachement(TEXT);
+			text(channel);
 		}
 	}
 	
@@ -137,6 +139,38 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 			channel.onDecode(packet);
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+	
+	private final void text(final GearmanCodecChannel<Integer> channel) {
+		try {
+			final ByteBuffer buffer = channel.getBuffer();
+			if(buffer.hasRemaining()) return;
+			
+			final char newValue = (char) buffer.get(buffer.position()-1);
+			
+			if(newValue!='\n' && newValue!='\r') {
+				buffer.limit(buffer.limit()+1);
+				return;
+			}
+			
+			try {
+				final byte[] strBytes = new byte[buffer.position()];
+				
+				buffer.flip();
+				buffer.get(strBytes);
+				
+				final String str = new String(strBytes, GearmanVariables.UTF_8);
+				final GearmanPacket packet = GearmanPacket.createTEXT(str);
+				
+				channel.onDecode(packet);
+			} finally {
+				buffer.clear();
+				buffer.limit(1);
+				channel.setCodecAttachement(FORMAT);
+			}
+		} catch (Throwable th) {
+			th.printStackTrace();
 		}
 	}
 	

@@ -30,9 +30,11 @@ public final class Gearman implements GearmanService {
 	}
 	
 	private Gearman(final int coreThreads) throws IOException {
-		final Scheduler s = new Scheduler(new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>()));
-		s.setThreadTimeout(60L, TimeUnit.SECONDS);
-		s.allowSchedulerThreadTimeOut(true);
+		ThreadPoolExecutor exe = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
+		exe.allowCoreThreadTimeOut(false);
+		exe.prestartCoreThread();
+		
+		final Scheduler s = new Scheduler(exe);
 		
 		this.pool = s;
 		
@@ -81,5 +83,9 @@ public final class Gearman implements GearmanService {
 	
 	final ScheduledExecutorService getPool() {
 		return this.pool;
+	}
+	
+	final void onServiceShutdown(GearmanService service) {
+		this.services.remove(service);
 	}
 }

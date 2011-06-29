@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.AcceptPendingException;
 import java.nio.channels.AsynchronousChannelGroup;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -11,9 +12,11 @@ import java.nio.channels.NotYetBoundException;
 import java.nio.channels.ShutdownChannelGroupException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConnectionManager.ConnectCallbackResult;
@@ -141,16 +144,16 @@ public final class NioReactor {
 		// If this port is already open, an exception should have been thrown
 		assert o==null;
 		
-		server.accept(null, new CompletionHandler<AsynchronousSocketChannel, Object>() {
+		server.accept(new LinkedBlockingQueue<Socket<?>>(), new CompletionHandler<AsynchronousSocketChannel, Queue<Socket<?>>>() {
 
 			@Override
-			public void completed(AsynchronousSocketChannel result, Object attachment) {
-				server.accept(null, this);
-				
+			public void completed(AsynchronousSocketChannel result, Queue<Socket<?>> clientList) {
 				try {
 					SocketImpl<A> sImpl = new SocketImpl<A>(result,handler);
 					handler.onAccept(sImpl);
 					sImpl.read();
+					
+					clientList.add(sImpl);
 				} catch (IOException e) {
 					// failed to create SocketImpl.
 				} catch (Throwable e) {
@@ -158,12 +161,21 @@ public final class NioReactor {
 					
 					e.printStackTrace();
 					return;
+				} finally {
+					server.accept(clientList, this);
 				}
 			}
 
 			@Override
-			public void failed(Throwable exc, Object attachment) {
+			public void failed(Throwable exc, Queue<Socket<?>> clientList) {
+				for(Socket<?> socket : clientList) {
+					socket.close();
+				}
+				
 				if(exc instanceof ShutdownChannelGroupException) {
+					// It is possible this method is entered. However, there's not much to do
+					return;
+				} else if(exc instanceof AsynchronousCloseException) {
 					// It is possible this method is entered. However, there's not much to do
 					return;
 				} else if(exc instanceof AcceptPendingException) {

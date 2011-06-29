@@ -313,4 +313,10 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 			if(this.future!=null) future.cancel(false);
 		}
 	}
+	
+	@Override
+	public void shutdown() {
+		super.shutdown();
+		gearman.onServiceShutdown(this);
+	}
 }

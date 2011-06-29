@@ -211,7 +211,7 @@ public class Scheduler implements ScheduledExecutorService {
 	/** The amount of time, in nanoseconds, a thread can be ideal before being terminated */
 	private long threadTimeout = 60000000000L;	// 60 seconds
 	/** If true the driving thread can timeout, otherwise it cannot */
-	private boolean isThreadTimeout = false;
+	private boolean isThreadTimeout = true;
 	
 	public final void allowSchedulerThreadTimeOut(boolean isThreadTimeout) {
 		this.isThreadTimeout = isThreadTimeout;

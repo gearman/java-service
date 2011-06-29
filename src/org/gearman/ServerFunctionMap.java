@@ -41,6 +41,13 @@ class ServerFunctionMap {
 	
 	public final void sendStatus(ServerClient client) {
 		
+		for(Reference<InnerFunction> funcRef : funcMap.values()) {
+			InnerFunction func = funcRef.get();
+			if(func!=null) 
+				client.sendPacket(func.getStatus(), null);
+		}
+		
+		client.sendPacket(ServerStaticPackets.TEXT_DONE, null /*TODO*/);
 	}
 	
 	private final class InnerFunction extends ServerFunction {

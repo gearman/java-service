@@ -473,6 +473,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			this.available.clear();
 			
 			super.shutdown();
+			gearman.onServiceShutdown(this);
 		}
 	}
 }

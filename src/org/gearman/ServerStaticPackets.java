@@ -7,6 +7,7 @@
 package org.gearman;
 
 import org.gearman.core.GearmanPacket;
+import org.gearman.core.GearmanVariables;
 import org.gearman.core.GearmanPacket.Magic;
 import org.gearman.core.GearmanPacket.Type;
 
@@ -24,18 +25,13 @@ final class ServerStaticPackets {
 	 * This is given to notify the client that a bad magic number was used.
 	 */
 	public static final GearmanPacket ERROR_BAD_MAGIC = new GearmanPacket(
-			Magic.RES, Type.ERROR, new byte[] { 98, 97, 100, 95, 109, 97, 103,
-					105, 99, 82, 101, 113, 117, 101, 115, 116, 32, 109, 97,
-					103, 105, 99, 32, 101, 120, 112, 101, 99, 116, 101, 100 });
+			Magic.RES, Type.ERROR, "bad_magic".getBytes(), "Request magic expected".getBytes(GearmanVariables.UTF_8));
 
 	/**
 	 * Sent to a client when an unknown or unimplemented packet type is received
 	 */
 	public static final GearmanPacket ERROR_BAD_COMMAND = new GearmanPacket(
-			Magic.RES, Type.ERROR, new byte[] { 98, 97, 100, 95, 99, 111, 109,
-					109, 97, 110, 100 }, new byte[] { 67, 111, 109, 109, 97,
-					110, 100, 32, 110, 111, 116, 32, 101, 120, 112, 101, 99,
-					116, 101, 100 });
+			Magic.RES, Type.ERROR, "bad command".getBytes(), "Command not expected".getBytes());
 
 	/**
 	 * Sent to a client when a job cannot be found in with the following
@@ -67,12 +63,9 @@ final class ServerStaticPackets {
 			Magic.RES, Type.OPTION_RES, new byte[] {
 					101, 120, 99, 101, 112, 116, 105, 111, 110, 115 });
 
-	public static final GearmanPacket TEXT_UNKNOWN_COMMAND = GearmanPacket.createTEXT(
-			"ERR unknown_command Unknown+server+command");
-	public static final GearmanPacket TEXT_INCOMPLETE_ARGS = GearmanPacket.createTEXT(
-			"ERR incomplete_args An+incomplete+set+of+arguments+was+sent+to+this+command");
-	public static final GearmanPacket TEXT_OK = GearmanPacket.createTEXT("OK");
-	public static final GearmanPacket TEXT_DONE = GearmanPacket.createTEXT(".");
-	public static final GearmanPacket TEXT_VERSION = GearmanPacket.createTEXT(
-			"java-gearman-service v0.3");
+	public static final GearmanPacket TEXT_UNKNOWN_COMMAND = GearmanPacket.createTEXT("ERR unknown_command Unknown+server+command\n");
+	public static final GearmanPacket TEXT_INCOMPLETE_ARGS = GearmanPacket.createTEXT("ERR incomplete_args An+incomplete+set+of+arguments+was+sent+to+this+command\n");
+	public static final GearmanPacket TEXT_OK = GearmanPacket.createTEXT("OK\n");
+	public static final GearmanPacket TEXT_DONE = GearmanPacket.createTEXT(".\n");
+	public static final GearmanPacket TEXT_VERSION = GearmanPacket.createTEXT("java-gearman-service v0.3\n");
 }

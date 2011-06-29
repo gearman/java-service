@@ -41,7 +41,10 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 	
 	@Override
 	public void close() {
-		this.isClosed = true;
+		synchronized(this) {
+			if(this.isClosed) return;
+			this.isClosed = true;
+		}
 		
 		if(this.writters.isEmpty())
 			this.closeConnection();
@@ -184,7 +187,8 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 		
 		// An IOException is sometimes thrown when the server suddenly disconnects
 		if(exc instanceof IOException) {
-			this.closeConnection();
+			this.writters.clear();
+			this.close();
 			return;
 		}
 		
@@ -198,6 +202,9 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 			this.socketChannel.close();
 		} catch (IOException ioe) {
 			//TODO log error
+			System.out.println(ioe.getMessage());
+		} catch (Throwable th) {
+			System.out.println(th.getMessage());
 		} finally {
 			this.handler.onDisconnect(this);
 		}

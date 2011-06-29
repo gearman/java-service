@@ -154,19 +154,19 @@ final class ServerInstructionSet {
 		final String pkt= new String(packet.toBytes(), GearmanConstants.UTF_8);
 		final String[] args = pkt.trim().split("[ \t]");
 		
-		if(args[0].equals("clients")) {
+		if(args[0].equalsIgnoreCase("workers")) {
 			text_workers(args, client);
 			return;
-		} else if(args[0].equals("status")) {
+		} else if(args[0].equalsIgnoreCase("status")) {
 			text_status(args, client);
 			return;
-		} else if(args[0].equals("maxqueue")) {
+		} else if(args[0].equalsIgnoreCase("maxqueue")) {
 			text_maxqueue(args, client);
 			return;
-		} else if(args[0].equals("shutdown")) {
+		} else if(args[0].equalsIgnoreCase("shutdown")) {
 			text_shutdown(args, client);
 			return;
-		} else if(args[0].equals("version")) {
+		} else if(args[0].equalsIgnoreCase("version")) {
 			text_version(args, client);
 			return;
 		} else {
@@ -212,7 +212,8 @@ final class ServerInstructionSet {
 	
 	private final void text_shutdown(final String[] args, final ServerClient client) {
 		if(client.getLocalPort()==-1) return; // Don't shutdown if local
-		this.server.closePort(client.getLocalPort());
+		this.server.shutdown();
+//		this.server.closePort(client.getLocalPort());
 	}
 	
 	private final void text_version(final String[] args, final ServerClient client) {

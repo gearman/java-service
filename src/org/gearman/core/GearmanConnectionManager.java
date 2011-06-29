@@ -122,8 +122,9 @@ public class GearmanConnectionManager {
 		public final void onDisconnect(final Socket<Connection> socket) {
 			
 			final Connection conn = socket.getAttachment();
-			if(socket.isClosed())
-				return;
+			
+//			if(socket.isClosed())
+//				return;
 			
 			this.handler.onDisconnect(conn);
 			conn.codecAtt=null;

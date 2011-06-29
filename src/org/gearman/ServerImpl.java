@@ -20,6 +20,9 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	private final Set<ServerClient> clients = new ConcurrentHashSet<ServerClient>();
 	private final ServerInstructionSet instructSet = new ServerInstructionSet(this);
 	
+	private boolean isShutdown = false;
+	private boolean isGearmanCloseOnShutdown = false;
+	
 	public ServerImpl(final Gearman gearman) {
 		this.gearman = gearman;
 	}
@@ -37,6 +40,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	@Override
 	public boolean closePort(int port) {
+		if(!this.openPorts.remove(port)) return false;
 		return this.gearman.getGearmanConnectionManager().closePort(port);
 	}
 
@@ -63,11 +67,13 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	@Override
 	public void openPort(int port) throws IOException {
 		this.gearman.getGearmanConnectionManager().openPort(port, this);
+		this.openPorts.add(port);
 	}
 
 	@Override
 	public <X> void openPort(int port, GearmanCodec<X> codec) throws IOException {
 		this.gearman.getGearmanConnectionManager().openPort(port, this, codec);
+		this.openPorts.add(port);
 	}
 
 	@Override
@@ -77,13 +83,22 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	@Override
 	public boolean isShutdown() {
-		// TODO Auto-generated method stub
-		return false;
+		return this.isShutdown;
 	}
 
 	@Override
 	public void shutdown() {
-		// TODO Auto-generated method stub
+		synchronized(this) {
+			if(this.isShutdown) return;
+			this.isShutdown = true;
+		}
+		
+		this.closeAllPorts();
+		
+		if(this.isGearmanCloseOnShutdown) 
+			gearman.shutdown();
+		else
+			gearman.onServiceShutdown(this);
 	}
 
 	@Override
@@ -210,9 +225,12 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	}
 	
+	void closeGearmanOnShutdown(boolean value) {
+		this.isGearmanCloseOnShutdown = value;
+	}
 	
 	@SuppressWarnings("unused")
-	private final void DBG_printClientSize() {
+	private final void printClientSize() {
 		System.out.println(this.clients.size());
 	}
 }

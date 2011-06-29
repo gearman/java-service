@@ -45,7 +45,11 @@ public final class GearmanPacket {
 	 * @return
 	 * 		A GearmanPacket representing the given text packet
 	 */
-	public static final GearmanPacket createTEXT(final String packet) {
+	public static final GearmanPacket createTEXT(String packet) {
+		final char end = packet.charAt(packet.length()-1);
+		if(end!='\n' && end!='\r')
+			packet = packet+'\n';
+		
 		return new GearmanPacket(Magic.REQ, Type.TEXT, packet.getBytes(GearmanConstants.UTF_8));
 	}
 	
@@ -222,12 +226,16 @@ public final class GearmanPacket {
     
 
     /**
-     * Retrieves the Packet as a series of bytes. Typicall called when about
+     * Retrieves the Packet as a series of bytes. Typically called when about
      * to send the packet over a {@link  GearmanJobServerConnection}.
      *
      * @return a byte array representing the packet.
      */
-    public byte [] toBytes() {
+    public byte[] toBytes() {
+    	
+    	if(this.getPacketType().equals(Type.TEXT)) {
+    		return this.getArgumentData(0);
+    	}
     	
     	// Find the packet size
     	int packet_size = HEADER_SIZE;

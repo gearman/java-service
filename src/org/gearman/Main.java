@@ -46,7 +46,10 @@ class Main {
 	public static void main(final String[] args) {
 		try {
 			Gearman gearman = new Gearman();
-			gearman.createGearmanServer().openPort(new Main(args).getPort());
+			GearmanServer server = gearman.createGearmanServer();
+			((ServerImpl)server).closeGearmanOnShutdown(true);
+			
+			server.openPort(new Main(args).getPort());
 		} catch (Throwable th) {
 			System.err.println(th.getMessage());
 			System.err.println();

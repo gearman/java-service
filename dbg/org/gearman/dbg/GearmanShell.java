@@ -6,6 +6,7 @@
 
 package org.gearman.dbg;
 
+import java.util.concurrent.ThreadPoolExecutor;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -13,6 +14,8 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,8 +51,7 @@ import org.gearman.util.ArgumentParser;
  *
  */
 public class GearmanShell {
-	
-	final GearmanConnectionManager gcm = new GearmanConnectionManager();
+	final GearmanConnectionManager gcm;
 	
 	public static final void main(final String[] argv) {
 		final ArgumentController argCon = new ArgumentController(argv);
@@ -63,6 +65,11 @@ public class GearmanShell {
 	}
 	
 	private GearmanShell(InetSocketAddress adrs) throws IOException {
+		ThreadPoolExecutor exe = new ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+		exe.prestartCoreThread();
+		this.gcm = new GearmanConnectionManager(exe);
+		
+		
 		this.gcm.createGearmanConnection(adrs, new Handler() ,new GearmanCallbackHandler<InetSocketAddress, ConnectCallbackResult>(){
 			
 			@Override
@@ -70,7 +77,8 @@ public class GearmanShell {
 				if(result.isSuccessful())return;
 				
 				System.out.println(result);
-				GearmanShell.this.gcm.shutdown();			}
+				GearmanShell.this.gcm.shutdown();
+			}
 		});
 	}
 	
