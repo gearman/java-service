@@ -8,6 +8,11 @@ to call functions between languages. It can be used in a variety of applications
 from high-availability web sites to the transport of database replication events. In 
 other words, it is the nervous system for how distributed processing communicates.
 
+~~~~~~~~~ 0.4 ~~~~~~~~~
+Issues Fixed
+* Issue 8: Text instructions make the server hang
+* Issue 9: Internal onDisconnect not called
+* Issue 10: the server stops without errors
 
 ~~~~~~~~~ 0.3 ~~~~~~~~~
 Issues Fixed:
