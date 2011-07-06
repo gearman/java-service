@@ -1,6 +1,7 @@
 package org.gearman;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,7 +11,6 @@ import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
 import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
-import org.gearman.util.ConcurrentHashSet;
 
 class ServerClientImpl implements ServerClient{
 
@@ -19,7 +19,7 @@ class ServerClientImpl implements ServerClient{
 	/** The set of all functions that this worker can perform */
 	private final ConcurrentHashMap<ByteArray,ServerFunction> funcMap = new ConcurrentHashMap<ByteArray,ServerFunction>();
 	/** The set of all disconnect listeners */
-	private final Set<ServerClientDisconnectListener> disconnectListeners = new ConcurrentHashSet<ServerClientDisconnectListener>();
+	private final Set<ServerClientDisconnectListener> disconnectListeners = new HashSet<ServerClientDisconnectListener>();
 	/** Indicates if the client is to be notified when the next job comes in */ 
 	private boolean isSleeping	 = false;
 	/** The client id */
@@ -48,7 +48,9 @@ class ServerClientImpl implements ServerClient{
 				listener.onDisconnect(this);
 				return true;
 			} else {
-				return this.disconnectListeners.add(listener);
+				synchronized(this.disconnectListeners) {
+					return this.disconnectListeners.add(listener);
+				}
 			}
 		}
 	}
@@ -83,15 +85,17 @@ class ServerClientImpl implements ServerClient{
 			e.printStackTrace();
 		}
 		
-		for(ServerClientDisconnectListener l: this.disconnectListeners) {
-			l.onDisconnect(this);
+		synchronized(this.disconnectListeners) {
+			for(ServerClientDisconnectListener l: this.disconnectListeners) {
+				l.onDisconnect(this);
+			}
+			this.disconnectListeners.clear();
 		}
 		for(ServerFunction func : this.funcMap.values()) {
 			func.removeNoopable(this);
 		}
 		
 		this.funcMap.clear();
-		this.disconnectListeners.clear();
 	}
 	
 	@Override
@@ -173,7 +177,9 @@ class ServerClientImpl implements ServerClient{
 	
 	@Override
 	public boolean removeDisconnectListener(ServerClientDisconnectListener listener) {
-		return this.disconnectListeners.remove(listener);
+		synchronized(this.disconnectListeners) {
+			return this.disconnectListeners.remove(listener);
+		}
 	}
 	
 	@Override

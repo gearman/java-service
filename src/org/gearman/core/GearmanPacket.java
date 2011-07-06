@@ -181,15 +181,15 @@ public final class GearmanPacket {
 
     	this.arguments = arguments==null? new byte[0][]: arguments;
     	
-    	for(int i=0; i<arguments.length; i++) {
-    		if(arguments[i]==null) arguments[i] = new byte[0];
+    	for(int i=0; i<this.arguments.length; i++) {
+    		if(this.arguments[i]==null) this.arguments[i] = new byte[0];
     	}
     	
     	if(this.arguments.length!=type.getArgumentCount()) {
     		throw new IllegalArgumentException("Packet type " + type + " requires " + type.getArgumentCount() + " argument(s). Aquired " + this.arguments.length + " argument(s)");
     	}
     	for(int i=0; i<this.arguments.length-1; i++) {
-    		for(byte b : arguments[i]) {
+    		for(byte b : this.arguments[i]) {
     			if(b==0)  throw new IllegalArgumentException("Argument " + i + "contains a null value. Only the last argument can contain null values");
     		}
     	}

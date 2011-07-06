@@ -1,6 +1,7 @@
 package org.gearman;
 
 import java.lang.ref.WeakReference;
+import java.util.Arrays;
 import java.util.UUID;
 
 import org.gearman.GearmanJobStatus.StatusCallbackResult;
@@ -107,6 +108,22 @@ public abstract class GearmanJob {
 		 
 		 this.state = State.SUBMITTED;
 		 return true;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof GearmanJob) {
+			GearmanJob that = (GearmanJob)obj;
+			return Arrays.equals(this.getUniqueID(),that.getUniqueID()) &&
+					this.getFunctionName().equals(that.getFunctionName());
+		} else {
+			return false;
+		}
+	}
+	
+	@Override
+	public int hashCode() {
+		return Arrays.hashCode(this.getUniqueID()) + this.getFunctionName().hashCode();
 	}
 
 	/**

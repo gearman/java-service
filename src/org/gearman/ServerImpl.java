@@ -2,6 +2,7 @@ package org.gearman;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.gearman.core.GearmanCallbackHandler;
@@ -10,14 +11,13 @@ import org.gearman.core.GearmanConnection;
 import org.gearman.core.GearmanConnectionHandler;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
-import org.gearman.util.ConcurrentHashSet;
 
 class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient>{
 
 	private final Gearman gearman;
 	
-	private final Set<Integer> openPorts = new ConcurrentHashSet<Integer>();
-	private final Set<ServerClient> clients = new ConcurrentHashSet<ServerClient>();
+	private final Set<Integer> openPorts = new HashSet<Integer>();
+	private final Set<ServerClient> clients = new HashSet<ServerClient>();
 	private final ServerInstructionSet instructSet = new ServerInstructionSet(this);
 	
 	private boolean isShutdown = false;
@@ -33,14 +33,19 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	
 	@Override
 	public void closeAllPorts() {
-		for(Integer i : openPorts) {
-			this.closePort(i);
+		synchronized(this.openPorts) {
+			for(Integer i : openPorts) {
+				this.closePort(i);
+			}
 		}
 	}
 
 	@Override
 	public boolean closePort(int port) {
-		if(!this.openPorts.remove(port)) return false;
+		synchronized(this.openPorts) {
+			if(!this.openPorts.remove(port)) return false;
+		}
+		
 		return this.gearman.getGearmanConnectionManager().closePort(port);
 	}
 
@@ -67,13 +72,19 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	@Override
 	public void openPort(int port) throws IOException {
 		this.gearman.getGearmanConnectionManager().openPort(port, this);
-		this.openPorts.add(port);
+		
+		synchronized(this.openPorts) {
+			this.openPorts.add(port);
+		}
 	}
 
 	@Override
 	public <X> void openPort(int port, GearmanCodec<X> codec) throws IOException {
 		this.gearman.getGearmanConnectionManager().openPort(port, this, codec);
-		this.openPorts.add(port);
+		
+		synchronized(this.openPorts) {
+			this.openPorts.add(port);
+		}
 	}
 
 	@Override
@@ -105,15 +116,22 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	public void onAccept(GearmanConnection<ServerClient> conn) {
 		final ServerClient client = new ServerClientImpl(conn);
 		conn.setAttachment(client);
-		this.clients.add(client);
+		
+		synchronized(this.clients){
+			this.clients.add(client);
+		}
 	}
 	
 	@Override
 	public void onDisconnect(GearmanConnection<ServerClient> conn) {
 		conn.getAttachment().close();
 		
-		final boolean b = this.clients.remove(conn.getAttachment());
-		assert b;
+		final boolean b;
+		
+		synchronized(this.clients) {
+			b = this.clients.remove(conn.getAttachment());
+			assert b;
+		}
 	}
 	
 	@Override
