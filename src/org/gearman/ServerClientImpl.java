@@ -149,7 +149,7 @@ class ServerClientImpl implements ServerClient{
 	@Override
 	public void grabJobUniq() {
 		for(ServerFunction func : this.funcMap.values()) {
-			if(func.grabJob(this))
+			if(func.grabJobUniqueID(this))
 				return;
 		}
 		this.conn.sendPacket(GearmanPacket.NO_JOB, null  /*TODO*/);

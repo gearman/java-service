@@ -163,6 +163,10 @@ public final class GearmanPacket {
 		return new GearmanPacket(Magic.RES, Type.JOB_ASSIGN, jobHandle, funcName.getBytes(GearmanConstants.UTF_8), data);
 	}
 	
+	public static final GearmanPacket createJOB_ASSIGN_UNIQ(final byte[] jobHandle, final String funcName, final byte[] uniqueID, final byte[] data) {
+		return new GearmanPacket(Magic.RES, Type.JOB_ASSIGN_UNIQ, jobHandle, funcName.getBytes(GearmanConstants.UTF_8), uniqueID, data);
+	}
+	
 	public static final GearmanPacket createGET_STATUS(final byte[] jobHandle) {
 		return new GearmanPacket(Magic.REQ, Type.GET_STATUS, jobHandle);
 	}
@@ -547,4 +551,7 @@ public final class GearmanPacket {
     		}
     	}
     }
+	public int getArgumentCount() {
+		return this.arguments.length;
+	}
 }

@@ -136,6 +136,7 @@ public final class StandardCodec implements GearmanCodec<Integer>{
 			}
 			
 			final GearmanPacket packet = new GearmanPacket(magic, type, parseArguments(body,type));
+			
 			channel.onDecode(packet);
 		} catch (Exception e) {
 			e.printStackTrace();
