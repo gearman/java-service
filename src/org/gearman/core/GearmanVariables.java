@@ -7,4 +7,5 @@ public class GearmanVariables {
 	}
 	public static final Charset UTF_8 = Charset.forName("UTF-8");
 	public static final int DEFAULT_PORT = 4730;
+	public static String VERSION = "java-gearman-service-0.4.2";
 }

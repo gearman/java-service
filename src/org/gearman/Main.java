@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import org.gearman.core.GearmanVariables;
 import org.gearman.util.ArgumentParser;
 import org.gearman.util.ArgumentParser.Option;
 
@@ -13,12 +14,11 @@ import org.gearman.util.ArgumentParser.Option;
  */
 class Main {
 	
-	private static String VERSION = "java-gearman-service-0.1";
 	private static String HELP = 
-		VERSION + "\n" +
+		GearmanVariables.VERSION + "\n" +
 		"\n" +
 		"usage:\n" +
-		"java [jvm options] -jar "+VERSION+".jar [server options]\n" +
+		"java [jvm options] -jar "+GearmanVariables.VERSION+".jar [server options]\n" +
 		"\n" +
 		"Options:\n" +
 		"   -p PORT   --port=PORT     Defines what port number the server will listen on (Default: 4730)\n" +
@@ -35,7 +35,7 @@ class Main {
 	}
 	
 	private static final void printVersion() {
-		System.out.println(VERSION);
+		System.out.println(GearmanVariables.VERSION);
 		System.exit(0);
 	}
 	
