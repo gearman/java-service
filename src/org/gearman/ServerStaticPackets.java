@@ -67,5 +67,5 @@ final class ServerStaticPackets {
 	public static final GearmanPacket TEXT_INCOMPLETE_ARGS = GearmanPacket.createTEXT("ERR incomplete_args An+incomplete+set+of+arguments+was+sent+to+this+command\n");
 	public static final GearmanPacket TEXT_OK = GearmanPacket.createTEXT("OK\n");
 	public static final GearmanPacket TEXT_DONE = GearmanPacket.createTEXT(".\n");
-	public static final GearmanPacket TEXT_VERSION = GearmanPacket.createTEXT("java-gearman-service v0.4.1\n");
+	public static final GearmanPacket TEXT_VERSION = GearmanPacket.createTEXT("java-gearman-service v0.4.2\n");
 }
