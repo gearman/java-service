@@ -39,10 +39,6 @@ public final class Gearman implements GearmanService {
 		this(1,logger);
 	}
 	
-	private Gearman(final int coreThreads) throws IOException {
-		this(coreThreads, Logger.getAnonymousLogger());
-	}
-	
 	private Gearman(final int coreThreads, Logger logger) throws IOException {
 		ThreadPoolExecutor exe = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
 		exe.allowCoreThreadTimeOut(false);

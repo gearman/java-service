@@ -8,6 +8,14 @@ to call functions between languages. It can be used in a variety of applications
 from high-availability web sites to the transport of database replication events. In 
 other words, it is the nervous system for how distributed processing communicates.
 
+~~~~~~~~~ 0.5 ~~~~~~~~~
+Enhancements Implemented:
+* Enhancements 2: Implement a logger
+
+Issues Fixed
+* Issue 11: The server displays an error message when using perl worker/client
+* Issue 14: python & java-gearman-service communication issue
+
 ~~~~~~~~~ 0.4 ~~~~~~~~~
 Issues Fixed
 * Issue 8: Text instructions make the server hang

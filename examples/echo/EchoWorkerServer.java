@@ -1,8 +1,6 @@
 package echo;
 
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.gearman.Gearman;
 import org.gearman.GearmanServer;
