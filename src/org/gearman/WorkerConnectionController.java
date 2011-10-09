@@ -121,7 +121,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 				// but before this lookup is performed.
 
 				// send WORK_FAIL
-				conn.sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ, jobHandle),null /*TODO*/);
+				sendPacket(GearmanPacket.createWORK_FAIL(Magic.REQ, jobHandle),null);
 				return;
 			}
 						
@@ -149,7 +149,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 		this.noopTimeout = System.currentTimeMillis();
 		
 		this.getDispatcher().done();
-		conn.sendPacket(GearmanPacket.createPRE_SLEEP(), null /*TODO*/);
+		sendPacket(GearmanPacket.createPRE_SLEEP(), null);
 		
 		// Since the connection is currently in the sleeping state, it will
 		// not yet return to the dispatcher's queue
