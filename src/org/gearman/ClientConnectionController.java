@@ -31,8 +31,8 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 	private long responceTimeout = Long.MAX_VALUE;
 	private long idleTimeout = Long.MAX_VALUE;
 	
-	ClientConnectionController(final ClientImpl client, final K key) {
-		super(client, key);
+	ClientConnectionController(final ClientImpl client, final K key, GearmanLogger logger) {
+		super(client, key, logger);
 	}
 	
 	public final void timeoutCheck(long time) {
@@ -87,26 +87,26 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		if(jobSub.isBackground) {
 			switch(p) {
 			case LOW_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW_BG(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB_LOW_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			case HIGH_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH_BG(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			case NORMAL_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_BG(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB_BG(funcName, uID, data), null/*TODO*/);
 				break;
 			}
 		} else {
 		
 			switch(p) {
 			case LOW_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_LOW(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB_LOW(funcName, uID, data), null/*TODO*/);
 				break;
 			case HIGH_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB_HIGH(funcName, uID, data), null/*TODO*/);
 				break;
 			case NORMAL_PRIORITY:
-				this.getConnection().sendPacket(GearmanPacket.createSUBMIT_JOB(funcName, uID, data), null/*TODO*/);
+				this.sendPacket(GearmanPacket.createSUBMIT_JOB(funcName, uID, data), null/*TODO*/);
 				break;
 			}
 		}
@@ -116,6 +116,8 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 		
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<Object> conn) {
+		super.getGearmanLogger().log(GearmanLogger.toString(conn) + " : IN : " + packet.getPacketType());
+		
 		switch (packet.getPacketType()) {
 		case JOB_CREATED:
 			jobCreated(packet);

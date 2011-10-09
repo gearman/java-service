@@ -131,12 +131,12 @@ final class ServerInstructionSet {
 		case ALL_YOURS:
 		case SUBMIT_JOB_EPOCH:
 		case SUBMIT_JOB_SCHED:
-			client.sendPacket(ServerStaticPackets.ERROR_BAD_COMMAND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_BAD_COMMAND, null);
 			return;
 		
 		// Unknown Command
 		default:
-			client.sendPacket(ServerStaticPackets.ERROR_BAD_COMMAND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_BAD_COMMAND, null);
 			return;
 		}
 	}
@@ -170,15 +170,15 @@ final class ServerInstructionSet {
 			text_version(args, client);
 			return;
 		} else {
-			client.sendPacket(ServerStaticPackets.TEXT_UNKNOWN_COMMAND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.TEXT_UNKNOWN_COMMAND, null);
 		}
 	}
 	
 	private final void text_workers(final String[] args, final ServerClient client) {
 		for(ServerClient c : this.server.getClientSet())
-			client.sendPacket(c.getStatus(), null /*TODO*/);
+			client.sendPacket(c.getStatus(), null);
 		
-		client.sendPacket(ServerStaticPackets.TEXT_DONE, null /*TODO*/);
+		client.sendPacket(ServerStaticPackets.TEXT_DONE, null);
 	}
 	
 	private final void text_status(final String[] args, final ServerClient client) {
@@ -188,21 +188,21 @@ final class ServerInstructionSet {
 	private final void text_maxqueue(final String[] args, final ServerClient client) {
 		final byte[] funcName = args[1].getBytes(GearmanConstants.UTF_8);
 		if(funcName==null) {
-			client.sendPacket(ServerStaticPackets.TEXT_INCOMPLETE_ARGS, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.TEXT_INCOMPLETE_ARGS, null);
 			return;
 		}
 		final ByteArray funcNameBA = new ByteArray(funcName);
 		
 		final String sizeStr = args[2];
 		if(sizeStr==null) {
-			client.sendPacket(ServerStaticPackets.TEXT_INCOMPLETE_ARGS, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.TEXT_INCOMPLETE_ARGS, null);
 			return;
 		}
 		
 		final int size;
 		try { size = Integer.parseInt(sizeStr); }
 		catch (NumberFormatException e) {
-			client.sendPacket(ServerStaticPackets.TEXT_OK, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.TEXT_OK, null);
 			return;
 		}
 		
@@ -217,7 +217,7 @@ final class ServerInstructionSet {
 	}
 	
 	private final void text_version(final String[] args, final ServerClient client) {
-		client.sendPacket(ServerStaticPackets.TEXT_VERSION, null /*TODO*/);
+		client.sendPacket(ServerStaticPackets.TEXT_VERSION, null);
 	}
 	
 	/**
@@ -304,7 +304,7 @@ final class ServerInstructionSet {
 		 */
 		
 		packet.setMagic(Magic.RES);
-		client.sendPacket(packet, null /*TODO*/);
+		client.sendPacket(packet, null);
 	}
 	
 	private final void get_status(final GearmanPacket packet, final ServerClient client) {
@@ -325,13 +325,13 @@ final class ServerInstructionSet {
 			//Send unknown job STATUS_RES packet 
 			final byte[] unknown = new byte[]{'0'};
 			final GearmanPacket status_res = new GearmanPacket(Magic.RES, Type.STATUS_RES, jobHandle, unknown, unknown,unknown,unknown);
-			client.sendPacket(status_res, null /*TODO*/);
+			client.sendPacket(status_res, null);
 			return;
 		}
 		
 		final GearmanPacket status = job.createStatusResPacket();
 		
-		client.sendPacket(status, null /*TODO*/);
+		client.sendPacket(status, null);
 	}
 	
 	private final void grab_job(final GearmanPacket packet, final ServerClient client) {
@@ -378,11 +378,11 @@ final class ServerInstructionSet {
 			// exceptions option
 			client.setForwardsExceptions(true);
 			
-			client.sendPacket(ServerStaticPackets.OPTION_RES_EXCEPTIONS, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.OPTION_RES_EXCEPTIONS, null);
 			
 		} else {
 			// unknown option
-			client.sendPacket(ServerStaticPackets.ERROR_UNKNOWN_OPTION, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_UNKNOWN_OPTION, null);
 		}
 	}
 	
@@ -489,7 +489,7 @@ final class ServerInstructionSet {
 		
 		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
-			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null);
 		} else {
 			
 			// Construct a WORK_COMPLETE response packet 
@@ -516,7 +516,7 @@ final class ServerInstructionSet {
 		
 		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
-			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null);
 		} else {
 			packet.setMagic(Magic.RES);
 			job.sendPacket(packet);
@@ -557,7 +557,7 @@ final class ServerInstructionSet {
 		
 		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
-			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null);
 		} else {
 			packet.setMagic(Magic.RES);
 			job.sendPacket(packet);
@@ -579,7 +579,7 @@ final class ServerInstructionSet {
 		
 		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null){
-			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null);
 		} else {
 			job.workComplete(packet);
 		}
@@ -612,7 +612,7 @@ final class ServerInstructionSet {
 		
 		final ServerJob job = ServerJobAbstract.getJob(jobHandleBA);
 		if(job==null) {
-			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null /*TODO*/);
+			client.sendPacket(ServerStaticPackets.ERROR_JOB_NOT_FOUND, null);
 		} else {
 			packet.setMagic(Magic.RES);
 			job.setStatus(num,den);

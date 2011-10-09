@@ -42,13 +42,12 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 				}
 			}
 		}
-		
 	}
 	
 	private class LocalConnectionController extends WorkerConnectionController<GearmanServer, org.gearman.GearmanServer.ConnectCallbackResult> {
 		
 		LocalConnectionController(GearmanServer key) {
-			super(WorkerImpl.this, key);
+			super(WorkerImpl.this, key, logger);
 		}
 
 		@Override
@@ -113,7 +112,7 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 		private Reconnector r;
 		
 		RemoteConnectionController(InetSocketAddress key) {
-			super(WorkerImpl.this, key);
+			super(WorkerImpl.this, key, logger);
 		}
 
 		@Override
@@ -191,6 +190,7 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 	}
 	
 	private final Gearman gearman;
+	private final GearmanLogger logger;
 	private final WorkerDispatcher dispatcher = new WorkerDispatcher();
 	private final ConcurrentHashMap<String, FunctionInfo> funcMap = new ConcurrentHashMap<String, FunctionInfo>();
 	
@@ -203,7 +203,9 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 		super(new WorkerLostConnectionPolicy(), 60, TimeUnit.SECONDS);
 		
 		assert gearman!=null;
+		
 		this.gearman = gearman;
+		this.logger = GearmanLogger.createGearmanLogger(gearman, this);
 	}
 
 	@Override
@@ -318,5 +320,15 @@ class WorkerImpl extends JobServerPoolAbstract<WorkerConnectionController<?,?>> 
 	public void shutdown() {
 		super.shutdown();
 		gearman.onServiceShutdown(this);
+	}
+
+	@Override
+	public void setLoggerID(String loggerId) {
+		this.logger.setLoggerID(loggerId);
+	}
+
+	@Override
+	public String getLoggerID() {
+		return this.logger.getLoggerID();
 	}
 }

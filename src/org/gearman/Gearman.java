@@ -6,6 +6,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.gearman.core.GearmanConnectionManager;
 import org.gearman.util.Scheduler;
@@ -20,16 +22,28 @@ import org.gearman.util.Scheduler;
  * @author isaiah.v
  */
 public final class Gearman implements GearmanService {
+	
+	private final Logger logger;
+	private String loggerID;
+	
 	private final GearmanConnectionManager gcm;
 	private final LinkedBlockingQueue<GearmanService> services = new LinkedBlockingQueue<GearmanService>();
 	
 	private final ScheduledExecutorService pool;
 	
 	public Gearman() throws IOException {
-		this(1);
+		this(1,Logger.getAnonymousLogger());
+	}
+	
+	public Gearman(Logger logger) throws IOException {
+		this(1,logger);
 	}
 	
 	private Gearman(final int coreThreads) throws IOException {
+		this(coreThreads, Logger.getAnonymousLogger());
+	}
+	
+	private Gearman(final int coreThreads, Logger logger) throws IOException {
 		ThreadPoolExecutor exe = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
 		exe.allowCoreThreadTimeOut(false);
 		exe.prestartCoreThread();
@@ -39,6 +53,13 @@ public final class Gearman implements GearmanService {
 		this.pool = s;
 		
 		this.gcm = new GearmanConnectionManager(this.pool);
+		
+		this.logger = logger;
+		this.loggerID = GearmanLogger.getDefaultLoggerID(this);
+	}
+	
+	public void setLoggerLevel(Level newLevel) {
+		this.logger.setLevel(newLevel);
 	}
 		
 	public final GearmanServer createGearmanServer() {
@@ -61,6 +82,10 @@ public final class Gearman implements GearmanService {
 	final GearmanConnectionManager getGearmanConnectionManager() {
 		return gcm;		
 	}
+	
+	final Logger getLogger() {
+		return this.logger;
+	}
 
 	@Override
 	public Gearman getGearman() {
@@ -69,7 +94,7 @@ public final class Gearman implements GearmanService {
 
 	@Override
 	public boolean isShutdown() {
-		return false;
+		return this.gcm.isShutdown();
 	}
 
 	@Override
@@ -87,5 +112,15 @@ public final class Gearman implements GearmanService {
 	
 	final void onServiceShutdown(GearmanService service) {
 		this.services.remove(service);
+	}
+
+	@Override
+	public void setLoggerID(String loggerId) {
+		this.loggerID = loggerId;
+	}
+
+	@Override
+	public String getLoggerID() {
+		return this.loggerID;
 	}
 }

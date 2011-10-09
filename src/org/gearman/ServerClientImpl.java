@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 import org.gearman.core.GearmanCallbackHandler;
 import org.gearman.core.GearmanConnection;
@@ -12,9 +13,11 @@ import org.gearman.core.GearmanConstants;
 import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
 
-class ServerClientImpl implements ServerClient{
+class ServerClientImpl implements ServerClient {
 
 	private final GearmanConnection<?> conn;
+	
+	private final GearmanLogger logger;
 	
 	/** The set of all functions that this worker can perform */
 	private final ConcurrentHashMap<ByteArray,ServerFunction> funcMap = new ConcurrentHashMap<ByteArray,ServerFunction>();
@@ -29,14 +32,11 @@ class ServerClientImpl implements ServerClient{
 	/** Indicates if this ServerClient is closed */
 	private boolean isClosed = false;
 	
-	public ServerClientImpl(final GearmanConnection<?> conn) {
-		this.conn = conn;
-	}
+	private final SendCallback defaultCallback = new SendCallback(null); 
 	
-	@SuppressWarnings("unused")
-	private final void DBG_printListenersSize() {
-		/* Debug Method */
-		System.out.println(disconnectListeners.size());
+	public ServerClientImpl(final GearmanConnection<?> conn, GearmanLogger logger) {
+		this.conn = conn;
+		this.logger = logger;
 	}
 	
 	@Override
@@ -81,8 +81,7 @@ class ServerClientImpl implements ServerClient{
 		
 		try { this.conn.close(); }
 		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.log(e);
 		}
 		
 		synchronized(this.disconnectListeners) {
@@ -143,7 +142,7 @@ class ServerClientImpl implements ServerClient{
 			if(func.grabJob(this))
 				return;
 		}
-		this.conn.sendPacket(GearmanPacket.NO_JOB, null  /*TODO*/);
+		this.sendPacket(GearmanPacket.NO_JOB, null);
 	}
 	
 	@Override
@@ -152,7 +151,7 @@ class ServerClientImpl implements ServerClient{
 			if(func.grabJobUniqueID(this))
 				return;
 		}
-		this.conn.sendPacket(GearmanPacket.NO_JOB, null  /*TODO*/);
+		this.sendPacket(GearmanPacket.NO_JOB, null);
 	}
 
 	@Override
@@ -171,7 +170,7 @@ class ServerClientImpl implements ServerClient{
 			if(!isSleeping) return;
 			this.isSleeping=false;
 			
-			this.conn.sendPacket(GearmanPacket.NOOP, null  /*TODO*/);
+			this.sendPacket(GearmanPacket.NOOP, null);
 		}
 	}	
 	
@@ -184,18 +183,20 @@ class ServerClientImpl implements ServerClient{
 	
 	@Override
 	public void reset() {
+		// TODO
 	}
 	
 	@Override
 	public void sendExceptionPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
 		assert packet.getPacketType().equals(GearmanPacket.Type.WORK_EXCEPTION);
 		if(this.isForwardsExceptions)
-			this.conn.sendPacket(packet, callback);
+			this.sendPacket(packet, callback);
 	}
 	
 	@Override
 	public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
-		this.conn.sendPacket(packet, callback);
+		logger.log(GearmanLogger.toString(conn) + " : OUT : " + packet.getPacketType().toString());
+		this.conn.sendPacket(packet, callback==null? this.defaultCallback : new SendCallback(callback));
 	}
 	
 	@Override
@@ -223,5 +224,25 @@ class ServerClientImpl implements ServerClient{
 	@Override
 	protected final void finalize() throws Throwable {
 		this.close();
+	}
+	
+	private final class SendCallback implements GearmanCallbackHandler<GearmanPacket, SendCallbackResult> {
+		private final GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback;
+		
+		private SendCallback(GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
+			this.callback = callback;
+		}
+		
+		@Override
+		public void onComplete(GearmanPacket data, SendCallbackResult result) {
+			try {
+				if(callback!=null)
+					callback.onComplete(data, result);
+			} finally {
+				if(!result.isSuccessful()) {
+					logger.log(Level.WARNING, GearmanLogger.toString(conn) + " : FAILED TO SEND PACKET : " + data.getPacketType().toString());
+				}
+			}
+		}
 	}
 }

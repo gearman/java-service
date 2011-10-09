@@ -2,6 +2,7 @@ package echo;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.logging.Level;
 
 import org.gearman.Gearman;
 import org.gearman.GearmanClient;

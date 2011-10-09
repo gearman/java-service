@@ -8,7 +8,7 @@ import org.gearman.GearmanJobStatus.StatusCallbackResult;
 import org.gearman.GearmanJobStatus.StatusResult;
 import org.gearman.JobServerPoolAbstract.ConnectionController;
 import org.gearman.core.GearmanCallbackHandler;
-import org.gearman.core.GearmanConnection;
+import org.gearman.core.GearmanPacket;
 import org.gearman.util.ByteArray;
 
 
@@ -125,17 +125,10 @@ public abstract class GearmanJob {
 	public int hashCode() {
 		return Arrays.hashCode(this.getUniqueID()) + this.getFunctionName().hashCode();
 	}
-
-	/**
-	 * Gets the GearmanConnection if one is available.<br>
-	 * <br>
-	 * This method should only be called internally by the gearman API
-	 * @return
-	 * 		The GearmanConnection
-	 */
-	final GearmanConnection<?> getConnection() { 
+	
+	final boolean sendPacket(GearmanPacket packet) {
 		final ConnectionController<?,?> conn = connection==null? null: connection.get();
-		return conn==null? null: conn.getConnection();
+		return conn==null? false: conn.sendPacket(packet, null);
 	}
 	
 	/**

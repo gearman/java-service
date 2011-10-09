@@ -10,6 +10,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import org.gearman.GearmanJobStatus.StatusCallbackResult;
 import org.gearman.GearmanLostConnectionPolicy.Grounds;
@@ -76,6 +77,26 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		 */
 		WAITING
 	};
+	
+	private static class SendCallback implements GearmanCallbackHandler<GearmanPacket, SendCallbackResult> {
+		private final GearmanLogger logger;
+		private final GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback;
+		
+		private SendCallback(GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback, GearmanLogger logger) {
+			this.logger = logger;
+			this.callback = callback;
+		}
+		
+		@Override
+		public void onComplete(GearmanPacket data, SendCallbackResult result) {
+			if(!result.isSuccessful()) {
+				logger.log(Level.WARNING, "");
+			}
+			
+			if(callback!=null)
+				callback.onComplete(data, result);
+		}
+	}
 				
 	/**
 	 * Controls connections to job servers.
@@ -94,13 +115,17 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		private ScheduledFuture<?> future;
 		private Closer closer;
 		
+		private final SendCallback defaultCallback;
+		
 		private HashMap<ByteArray, JobStatus> pendingJobStatus; 
 		
 		private final Object lock = new Object();
 		
-		ConnectionController(JobServerPoolAbstract<?> sc, K key) {
+		ConnectionController(JobServerPoolAbstract<?> sc, K key, GearmanLogger logger) {
 			this.key = key;
 			this.sc = sc;
+			
+			this.defaultCallback = new SendCallback(null, logger);
 		}
 		
 		public void onStatusReceived(GearmanPacket packet) {
@@ -123,6 +148,10 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			catch (NumberFormatException e) { denominator = 0;}
 			
 			this.completeJobStatus(StatusCallbackResult.SUCCESS, jobHandle, isKnown, isRunning, numerator, denominator);
+		}
+		
+		public final GearmanLogger getGearmanLogger() {
+			return this.defaultCallback.logger;
 		}
 		
 		public final boolean isConnecting(){
@@ -151,6 +180,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		@Override
 		public final void onAccept(final GearmanConnection<Object> conn) {
+			this.defaultCallback.logger.log(GearmanLogger.toString(conn) + " : Connected");
 			
 			synchronized(this.lock) {
 				
@@ -168,14 +198,14 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					this.onOpen(oldState);
 					
 					if(!this.sc.id.equals(JobServerPoolAbstract.DEFAULT_CLIENT_ID)) {
-						this.conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null);
+						this.sendPacket(GearmanPacket.createSET_CLIENT_ID(this.sc.id), null);
 					}
 					
 					if(this.pendingJobStatus!=null && !this.pendingJobStatus.isEmpty()) {
 						
 						for(Entry<ByteArray, JobStatus> status : this.pendingJobStatus.entrySet()) {
 							final ByteArray jobHandle = status.getKey();
-							this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+							this.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 								@Override
 								public void onComplete(GearmanPacket data, SendCallbackResult result) {
 									if(!result.isSuccessful()) {
@@ -195,8 +225,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					try {
 						conn.close();
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						this.defaultCallback.logger.log(e);
 					}
 				}
 			}
@@ -204,6 +233,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		
 		@Override
 		public final void onDisconnect(final GearmanConnection<Object> conn) {
+			this.defaultCallback.logger.log(GearmanLogger.toString(conn) + " : Disconnected");
+			
 			synchronized(this.lock) {
 				if(!this.isOpen() && !this.isClosePending()) return;
 				
@@ -274,8 +305,16 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 			return this.state;
 		}
 		
-		public GearmanConnection<?> getConnection() {
-			return this.conn;
+		public boolean isConnected() {
+			return this.conn!=null;
+		}
+		
+		public boolean sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback) {
+			if(this.conn==null) return false;
+			
+			this.defaultCallback.logger.log(GearmanLogger.toString(conn) + " : OUT : " + packet.getPacketType().toString());
+			this.conn.sendPacket(packet, callback==null? this.defaultCallback: new SendCallback(callback, this.defaultCallback.logger));
+			return true;
 		}
 		
 		/**
@@ -409,8 +448,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 						try {
 							this.conn.close();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+							this.defaultCallback.logger.log(e);
 						}
 						this.conn = null;
 					}
@@ -445,8 +483,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					try {
 						conn.close();
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						this.defaultCallback.logger.log(e);
 					}
 				}
 				
@@ -486,7 +523,7 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 					this.openServer(true);
 				} else {
 					assert this.conn!=null && !this.conn.isClosed();
-					this.conn.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+					this.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 						@Override
 						public void onComplete(GearmanPacket data, SendCallbackResult result) {
 							if(!result.isSuccessful()) {
@@ -642,11 +679,8 @@ abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.Connection
 		if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
 		if(this.id.equals(id)) return;
 		
-		GearmanConnection<?> conn;
 		for(X x : this.connMap.values()) {
-			if((conn = x.getConnection())!=null) {
-				conn.sendPacket(GearmanPacket.createSET_CLIENT_ID(id), null);
-			}
+			x.sendPacket(GearmanPacket.createSET_CLIENT_ID(id), null);
 		}
 	}
 

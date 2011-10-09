@@ -41,7 +41,6 @@ public class EqualsLock {
 	 */
 	public final void lock(final Object key) {
 		try {
-			
 			synchronized(keys){
 				
 				while(!acquireLock(key, Thread.currentThread())) {

@@ -23,8 +23,11 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	private boolean isShutdown = false;
 	private boolean isGearmanCloseOnShutdown = false;
 	
+	private final GearmanLogger logger;
+	
 	public ServerImpl(final Gearman gearman) {
 		this.gearman = gearman;
+		this.logger = GearmanLogger.createGearmanLogger(gearman, this);
 	}
 	
 	public final Set<ServerClient> getClientSet() {
@@ -114,9 +117,11 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 	@Override
 	public void onAccept(GearmanConnection<ServerClient> conn) {
-		final ServerClient client = new ServerClientImpl(conn);
-		conn.setAttachment(client);
+		logger.log(GearmanLogger.toString(conn) + " : Connected");
 		
+		final ServerClient client = new ServerClientImpl(conn, logger);
+		conn.setAttachment(client);
+			
 		synchronized(this.clients){
 			this.clients.add(client);
 		}
@@ -124,6 +129,8 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	
 	@Override
 	public void onDisconnect(GearmanConnection<ServerClient> conn) {
+		logger.log(GearmanLogger.toString(conn) + " : Disconnected");
+		
 		conn.getAttachment().close();
 		
 		final boolean b;
@@ -136,6 +143,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<ServerClient> conn) {
+		logger.log(GearmanLogger.toString(conn) + " : IN : " + packet.getPacketType().toString());
 		
 		assert packet!=null;
 		assert conn.getAttachment()!=null;
@@ -143,7 +151,7 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 		try {
 			this.instructSet.execute(packet, conn.getAttachment());
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.log(e);
 		}
 	}
 	
@@ -230,7 +238,6 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 
 		@Override
 		public void sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, org.gearman.core.GearmanConnection.SendCallbackResult> callback) {
-			// TODO Auto-generated method stub
 			if(this.isClosed) {
 				if(callback!=null)
 					callback.onComplete(packet, SendCallbackResult.SERVICE_SHUTDOWN);
@@ -250,5 +257,15 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	@SuppressWarnings("unused")
 	private final void printClientSize() {
 		System.out.println(this.clients.size());
+	}
+
+	@Override
+	public void setLoggerID(String loggerId) {
+		this.logger.setLoggerID(loggerId);
+	}
+
+	@Override
+	public String getLoggerID() {
+		return this.logger.getLoggerID();
 	}
 }

@@ -34,34 +34,27 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	 */
 	private long grabTimeout = Long.MAX_VALUE;
 	
-	WorkerConnectionController(JobServerPoolAbstract<WorkerConnectionController<?,?>> sc, K key) {
-		super(sc, key);
+	WorkerConnectionController(JobServerPoolAbstract<WorkerConnectionController<?,?>> sc, K key, GearmanLogger logger) {
+		super(sc, key, logger);
 	}
 	
-	public final void canDo(final Set<String> funcNames) {
-		final GearmanConnection<?> conn = super.getConnection();
-		if(conn==null) return;
-		
+	public final void canDo(final Set<String> funcNames) {		
 		if(!funcNames.isEmpty()) {
 			for(String funcName : funcNames) {
-				conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
+				super.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
 			}
 			this.toDispatcher();
 		}
 	}
 	public final void canDo(final String funcName) {
-		final GearmanConnection<?> conn = super.getConnection();
-		if(conn==null) return;
+		boolean b = super.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
 		
-		conn.sendPacket(GearmanPacket.createCAN_DO(funcName), null);
-		this.toDispatcher();
+		if(b)
+			this.toDispatcher();
 	}
 	
 	public final void cantDo(final String funcName) {
-		final GearmanConnection<?> conn = super.getConnection();
-		if(conn==null) return;
-		
-		conn.sendPacket(GearmanPacket.createCANT_DO(funcName), null);
+		super.sendPacket(GearmanPacket.createCANT_DO(funcName), null);
 	}
 	
 	private final void error(final GearmanPacket packet) {
@@ -80,8 +73,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	 * This method should only be called by the Dispatcher
 	 */
 	public final void grabJob() {
-		final GearmanConnection<?> conn = super.getConnection();
-		if(conn==null) return;
+		if(!super.isConnected()) return; 
 
 		// When this method is called, this object is no longer in the
 		// Dispatcher's queue
@@ -94,13 +86,17 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 		this.getWorker().getGearman().getPool().execute(new Runnable() {
 			@Override
 			public void run() {
-				conn.sendPacket(GearmanPacket.createGRAB_JOB(), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+				boolean b = sendPacket(GearmanPacket.createGRAB_JOB(), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 					@Override
 					public void onComplete(GearmanPacket data, SendCallbackResult result) {
 						if(!result.isSuccessful())
 							WorkerConnectionController.this.getDispatcher().done();
 					}
 				});
+				
+				if(!b) {
+					WorkerConnectionController.this.getDispatcher().done();
+				}
 			}
 		});
 	}
@@ -179,6 +175,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<Object> conn) {
+		super.getGearmanLogger().log(GearmanLogger.toString(conn) + " : IN : " + packet.getPacketType());
 		
 		switch (packet.getPacketType()) {
 		case NOOP:
@@ -212,10 +209,7 @@ abstract class WorkerConnectionController<K, C extends GearmanCallbackResult> ex
 	}
 	
 	public final void resetAbilities() {
-		final GearmanConnection<?> conn = super.getConnection();
-		if(conn==null) return;
-		
-		conn.sendPacket(GearmanPacket.createRESET_ABILITIES(), null);
+		super.sendPacket(GearmanPacket.createRESET_ABILITIES(), null);
 	}
 	
 	public final void timeoutCheck(long time) {
