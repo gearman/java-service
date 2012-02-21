@@ -264,6 +264,7 @@ public class GearmanShell {
 				}
 				sb.append(args.poll());
 				sb.append('\n');
+				sb.append('\r');
 				
 				packet = org.gearman.core.GearmanPacket.createTEXT(sb.toString());
 			}

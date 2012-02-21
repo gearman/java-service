@@ -154,7 +154,9 @@ final class ServerInstructionSet {
 		final String pkt= new String(packet.toBytes(), GearmanConstants.UTF_8);
 		final String[] args = pkt.trim().split("[ \t]");
 		
-		if(args[0].equalsIgnoreCase("workers")) {
+		if(args.length==0 || args[0].isEmpty()) {
+			return;
+		} else if(args[0].equalsIgnoreCase("workers")) {
 			text_workers(args, client);
 			return;
 		} else if(args[0].equalsIgnoreCase("status")) {
