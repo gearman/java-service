@@ -4,15 +4,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.gearman.ServerJob.JobPriority;
+import org.gearman.ServerJob.JobState;
 import org.gearman.core.GearmanPacket;
 import org.gearman.core.GearmanConstants;
 import org.gearman.util.ByteArray;
 import org.gearman.util.EqualsLock;
 
 class ServerFunction {
-
+	AtomicLong emptyCount = new AtomicLong(0);
+	
 	/** The function's name */
 	private final ByteArray name;
 	/** The lock preventing jobs with the same ID to be created or altered at the same time */
@@ -57,7 +60,14 @@ class ServerFunction {
 		return GearmanPacket.createTEXT(sb.toString());
 	}
 	
-	public final void createJob(final ByteArray uniqueID, final byte[] data, final JobPriority priority, final ServerClient creator) {
+	public final void createJob(ByteArray uniqueID, final byte[] data, final JobPriority priority, final ServerClient creator) {
+		
+		if(uniqueID.isEmpty()) {
+			uniqueID = new ByteArray(("emptyID_"+emptyCount.incrementAndGet()).getBytes(GearmanConstants.UTF_8));
+			while(jobSet.containsKey(uniqueID)) {
+				uniqueID = new ByteArray(("emptyID_"+emptyCount.incrementAndGet()).getBytes(GearmanConstants.UTF_8));
+			}
+		}
 		
 		final Integer key = uniqueID.hashCode(); 
 		this.lock.lock(key);
@@ -68,15 +78,21 @@ class ServerFunction {
 			if(this.jobSet.containsKey(uniqueID)) {
 				
 				final Job job = this.jobSet.get(uniqueID);
-				assert job!=null;
 				
-				// If creator is specified, add creator to listener set and send JOB_CREATED packet
-				if(creator!=null) {
-					job.addClient(creator);
-					creator.sendPacket(job.createJobCreatedPacket(), null /*TODO*/);
+				if(job!=null) {
+					synchronized(job) {
+						if(job.getState()!=JobState.COMPLETE) {
+						
+							// If creator is specified, add creator to listener set and send JOB_CREATED packet
+							if(creator!=null) {
+								job.addClient(creator);
+								creator.sendPacket(job.createJobCreatedPacket(), null /*TODO*/);
+							}
+							
+							return;
+						}
+					}
 				}
-				
-				return;
 			}
 			
 			final Job job;

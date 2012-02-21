@@ -131,13 +131,12 @@ class ServerImpl implements GearmanServer, GearmanConnectionHandler<ServerClient
 	public void onDisconnect(GearmanConnection<ServerClient> conn) {
 		logger.log(GearmanLogger.toString(conn) + " : Disconnected");
 		
-		conn.getAttachment().close();
-		
-		final boolean b;
-		
-		synchronized(this.clients) {
-			b = this.clients.remove(conn.getAttachment());
-			assert b;
+		ServerClient client = conn.getAttachment();
+		if(client!=null) {
+			client.close();
+			synchronized(this.clients) {
+				this.clients.remove(conn.getAttachment());
+			}
 		}
 	}
 	

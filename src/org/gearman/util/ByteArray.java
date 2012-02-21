@@ -19,6 +19,10 @@ public final class ByteArray {
 		return array.clone();
 	}
 	
+	public boolean isEmpty() {
+		return array.length==0;
+	}
+	
 	public final String toString(Charset charset) {
 		return new String(array, charset);
 	}

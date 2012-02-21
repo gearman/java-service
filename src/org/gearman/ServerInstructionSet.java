@@ -493,7 +493,11 @@ final class ServerInstructionSet {
 		} else {
 			
 			// Construct a WORK_COMPLETE response packet 
-			job.workComplete(packet);
+			synchronized(job) {
+				// This operation must be synchronized. There is a race condition with
+				// ServerFunction#createJob() method.
+				job.workComplete(packet);
+			}
 		}
 	}
 	
