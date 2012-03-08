@@ -24,6 +24,8 @@ import org.gearman.core.GearmanConnection.SendCallbackResult;
 import org.gearman.util.ByteArray;
 
 /**
+ * A nasty class used to manage multa
+ * 
  * @author isaiah
  */
 abstract class JobServerPoolAbstract <X extends JobServerPoolAbstract.ConnectionController<?,?>> implements GearmanJobServerPool {

@@ -152,18 +152,13 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 				}
 				
 				
-				if(action.equals(Action.RECONNECT)) {
-					// Default reconnect
+				if(action==Action.RECONNECT)
+					action = Action.reconnectServer(ClientImpl.this.getReconnectPeriod(TimeUnit.NANOSECONDS), TimeUnit.NANOSECONDS);
 					
+				if(action.getNanoTime()==0) {
 					this.run();
 				} else {
-					// User defined
-					
-					if(action.getNanoTime()==0) {
-						this.run();
-					} else {
-						super.waitServer(this, action.getNanoTime(), TimeUnit.NANOSECONDS);
-					}
+					super.waitServer(this, action.getNanoTime(), TimeUnit.NANOSECONDS);
 				}
 			}
 		}
@@ -275,7 +270,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 					conn = icc;
 				} else {
 					// No available servers to connect to, fail job
-					job.onSubmissionComplete(GearmanClient.SubmitCallbackResult.FAILED_TO_NO_SERVER);
+					job.onSubmissionComplete(gearman, GearmanClient.SubmitCallbackResult.FAILED_TO_NO_SERVER);
 				}
 			}
 		}
@@ -425,9 +420,6 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 				assert this.open.isEmpty();
 				this.failTo(cjs, SubmitCallbackResult.FAILED_TO_CONNECT);
 			}
-			
-			this.available.add(icc);
-			assert this.available.contains(icc);
 		}
 	}
 	
@@ -446,7 +438,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 			ClientJobSubmission current;
 			do {
 				current=this.jobQueue.pollFirst();
-				current.onSubmissionComplete(result);
+				current.onSubmissionComplete(gearman,result);
 			} while(current!=job);
 		}
 	}
@@ -472,7 +464,7 @@ class ClientImpl extends JobServerPoolAbstract<ClientImpl.InnerConnectionControl
 	public final void shutdown() {
 		synchronized(this.open) {
 			for(ClientJobSubmission jobSub : this.jobQueue){
-				jobSub.onSubmissionComplete(SubmitCallbackResult.FAILED_TO_SHUTDOWN);
+				jobSub.onSubmissionComplete(gearman,SubmitCallbackResult.FAILED_TO_SHUTDOWN);
 			}
 			this.open.clear();
 			this.available.clear();

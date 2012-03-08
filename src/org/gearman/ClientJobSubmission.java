@@ -16,15 +16,22 @@ class ClientJobSubmission {
 		this.isBackground = isBackground;
 	}
 	
-	public void onSubmissionComplete(final SubmitCallbackResult result) {
+	public void onSubmissionComplete(Gearman gearman, final SubmitCallbackResult result) {
 		synchronized(this) {
 			if(this.result!=null) return;
 			this.result = result;
 			this.notifyAll();
 		}
 		
-		if(this.callback!=null) 
-			this.callback.onComplete(job, result);
+		if(this.callback!=null)  {
+			gearman.getPool().execute(new Runnable() {
+				@Override
+				public void run() {
+					callback.onComplete(job, result);
+				}
+				
+			});
+		}
 	}
 	
 	public SubmitCallbackResult join() {

@@ -277,7 +277,7 @@ abstract class ClientConnectionController <K, C extends GearmanCallbackResult> e
 			this.pendingJob = null;
 		}
 		
-		jobSub.onSubmissionComplete(SubmitCallbackResult.SUBMIT_SUCCESSFUL);
+		jobSub.onSubmissionComplete(this.getGearman(),SubmitCallbackResult.SUBMIT_SUCCESSFUL);
 		
 		if(!jobSub.isBackground) {
 			final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
