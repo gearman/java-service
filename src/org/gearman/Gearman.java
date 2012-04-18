@@ -8,8 +8,8 @@ package org.gearman;
 
 import java.io.IOException;
 
-import org.gearman.config.GearmanProperties;
-import org.gearman.config.PropertyName;
+import org.gearman.properties.GearmanProperties;
+import org.gearman.properties.PropertyName;
 
 /**
  * A <code>Gearman</code> object defines a gearman systems and creates gearman

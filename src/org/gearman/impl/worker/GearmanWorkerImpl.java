@@ -166,6 +166,7 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 	
 	public GearmanWorkerImpl(final GearmanImpl gearman) {
 		super(gearman, new GearmanLostConnectionPolicyImpl(), 60, TimeUnit.SECONDS);
+		
 	}
 
 	@Override

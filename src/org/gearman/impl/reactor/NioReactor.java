@@ -186,7 +186,12 @@ public final class NioReactor {
 	
 	public synchronized final <A> void openPort(final int port, final SocketHandler<A> handler) throws IOException {
 		final AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open(this.asyncChannelGroup);
-		server.bind(new InetSocketAddress(port));
+		try {
+			server.bind(new InetSocketAddress(port));
+		} catch (IOException ioe) {
+			server.close();
+			throw ioe;
+		}
 		
 		//TODO set options
 		

@@ -115,7 +115,7 @@ public final class GearmanPacket {
 		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB, funcName.getBytes(GearmanConstants.CHARSET), uID, data);
 	}
 	public static final GearmanPacket createSUBMIT_JOB_BG(final String funcName, final byte[] uID, final byte[] data) {
-		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB, funcName.getBytes(GearmanConstants.CHARSET), uID, data);
+		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_BG, funcName.getBytes(GearmanConstants.CHARSET), uID, data);
 	}
 	public static final GearmanPacket createSUBMIT_JOB_HIGH(final String funcName, final byte[] uID, final byte[] data) {
 		return new GearmanPacket(Magic.REQ, Type.SUBMIT_JOB_HIGH, funcName.getBytes(GearmanConstants.CHARSET), uID, data);

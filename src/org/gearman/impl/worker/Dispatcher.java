@@ -3,6 +3,8 @@ package org.gearman.impl.worker;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.gearman.impl.GearmanConstants;
+
 /**
  * Manages the number of concurrently executing jobs for a given worker.
  * 
@@ -25,7 +27,7 @@ class Dispatcher {
 	 * The maximum number of GRAB_JOB packets that may be dispatched at any
 	 * one time
 	 */
-	private int maxCount = 1;
+	private int maxCount = GearmanConstants.WORKER_THREADS;
 	
 	/**
 	 * The dispatch queue holds all {@link WorkerConnectionController} objects awaiting

@@ -232,11 +232,14 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 		GearmanJobReturnImpl jobReturn = jobSub.jobReturn;
 		
 		final byte[] jobHandle = packet.getArgumentData(0);
-		jobReturn.put(new GearmanJobEventImpl(GearmanJobEventType.GEARMAN_SUBMIT_SUCCESS, jobHandle));
 		
-		if(!jobSub.isBackground) {
+		if(jobSub.isBackground) {
+			jobReturn.eof(new GearmanJobEventImpl(GearmanJobEventType.GEARMAN_SUBMIT_SUCCESS, jobHandle));
+		} else {
+			jobReturn.put(new GearmanJobEventImpl(GearmanJobEventType.GEARMAN_SUBMIT_SUCCESS, jobHandle));
 			this.jobs.put(new ByteArray(jobHandle), jobReturn);
 		}
+		
 		this.grab();
 	}
 	

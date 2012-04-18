@@ -1,4 +1,4 @@
-package org.gearman.config;
+package org.gearman.properties;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,13 +20,17 @@ public class GearmanProperties {
 		
 		PROPERTIES = new Properties();
 		
+		for(PropertyName name : PropertyName.values()) {
+			PROPERTIES.setProperty(name.name, name.defaultValue);
+		}
+		
 		final File propertiesFile = new File(PROPERTIES_FILE_PATH);
 		
 		if(propertiesFile.canRead()) {
 			try (FileInputStream in = new FileInputStream(propertiesFile)){
 				PROPERTIES.load(in);
 			} catch(IOException ioe) {
-				Logger logger = LoggerFactory.getLogger(PropertyName.GEARMAN_LOGGER_NAME.defaultValue);
+				Logger logger = LoggerFactory.getLogger(getProperty(PropertyName.GEARMAN_LOGGER_NAME));
 				logger.warn("failed to load properties", ioe);
 			}
 		}
@@ -38,17 +42,18 @@ public class GearmanProperties {
 	
 	public static void setProperty(PropertyName name, String value) {
 		PROPERTIES.getProperty(name.name, name.defaultValue);
-		save();
 	}
 	
-	private static void save() {
+	public static void save() throws IOException {
 		final File propertiesFile = new File(PROPERTIES_FILE_PATH);
 		
 		try (FileOutputStream out = new FileOutputStream(propertiesFile)){
 			PROPERTIES.store(out, null);
 		} catch (IOException ioe) {
-			Logger logger = LoggerFactory.getLogger(PropertyName.GEARMAN_LOGGER_NAME.defaultValue);
+			Logger logger = LoggerFactory.getLogger(getProperty(PropertyName.GEARMAN_LOGGER_NAME));
 			logger.warn("failed to save properties", ioe);
+			
+			throw ioe;
 		}
 	}
 }

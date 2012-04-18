@@ -1,4 +1,4 @@
-package org.gearman.config;
+package org.gearman.properties;
 
 public enum PropertyName {
 	/** The class name of the gearman implementation */
@@ -10,7 +10,9 @@ public enum PropertyName {
 	/** The amount of time a thread must be ideal before it can die */
 	GEARMAN_THREADTIMEOUT("gearman.threadtimeout", "60000"),
 	
-	GEARMAN_LOGGER_NAME("gearman.loggername", "gearman");
+	GEARMAN_LOGGER_NAME("gearman.loggername", "gearman"),
+	
+	GEARMAN_WORKER_THREADS("gearman.workerthreads", "1");
 	
 	public final String name;
 	public final String defaultValue;

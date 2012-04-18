@@ -65,6 +65,7 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 				portSet.add(port);
 			} catch (IOException ioe) {
 				GearmanConstants.LOGGER.error("failed to open port: " + port, ioe);
+				throw ioe;
 			}
 		}
 		

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import org.gearman.Gearman;
 import org.gearman.impl.util.ArgumentParser;
 import org.gearman.impl.util.ArgumentParser.Option;
+import org.gearman.properties.GearmanProperties;
 
 /**
  * The class that starts the standalone server
@@ -22,9 +23,9 @@ class Main {
 		"\n" +
 		"Options:\n" +
 		"   -p PORT   --port=PORT     Defines what port number the server will listen on (Default: 4730)\n" +
-		"   -l LEVEL  --logger=LEVEL  Specifies the logging level (Default: 0)\n" +
+		"   -w        --writefile     Write the gearman.properties file to the current working directory and exit" +
 		"   -v        --version       Display the version of java gearman service and exit\n" +
-		"   -?        --help          Print this help menu and exit";
+		"   -h        --help          Print this help menu and exit";
 	
 	/**
 	 * Prints the current version and 
@@ -62,7 +63,6 @@ class Main {
 	}
 	
 	private int port = GearmanConstants.PORT;
-	private int logger = 0;
 	
 	private Main(final String[] args) {
 		final ArgumentParser ap = new ArgumentParser();
@@ -70,8 +70,8 @@ class Main {
 		boolean t1, t2, t3, t4;
 		t1 = ap.addOption('p', "port", true);
 		t2 = ap.addOption('v', "version", false);
-		t3 = ap.addOption('l', "logger", true);
-		t4 = ap.addOption('?', "help", false);
+		t3 = ap.addOption('w', "writefile", false);
+		t4 = ap.addOption('h', "help", false);
 		
 		assert t1&&t2&&t3&&t4;
 		
@@ -100,27 +100,24 @@ class Main {
 					printHelp(System.err);
 				}
 				break;
-			case 'l':
-				try {
-					this.logger = Integer.parseInt(op.getValue());
-					
-					if(logger<0) {
-						System.err.println("Illegal Logging Level");
-						System.err.println();
-						printHelp(System.err);
-					}
-				} catch(NumberFormatException nfe) {
-					System.err.println("failed to parse logger level to integer: "+op.getValue());
-					System.err.println();
-					printHelp(System.err);
-				}
-				break;
+			case 'w':
+				writefile();
 			case 'v':
 				printVersion();
 			case 'h':
 				printHelp(System.out);
 			}
 		}
+	}
+	
+	private void writefile() {
+		try {
+			GearmanProperties.save();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		System.exit(0);
 	}
 	
 	private int getPort() {
