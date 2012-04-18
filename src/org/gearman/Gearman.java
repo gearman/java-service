@@ -1,16 +1,15 @@
+/*
+ * Copyright (C) 2012 by Isaiah van der Elst <isaiah.v@comcast.net>
+ * Use and distribution licensed under the BSD license.  See
+ * the COPYING file in the parent directory for full text.
+ */
+
 package org.gearman;
 
 import java.io.IOException;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import org.gearman.core.GearmanConnectionManager;
-import org.gearman.util.Scheduler;
+import org.gearman.config.GearmanProperties;
+import org.gearman.config.PropertyName;
 
 /**
  * A <code>Gearman</code> object defines a gearman systems and creates gearman
@@ -21,102 +20,104 @@ import org.gearman.util.Scheduler;
  * 
  * @author isaiah.v
  */
-public final class Gearman implements GearmanService {
+public abstract class Gearman implements GearmanService{
 	
-	private final Logger logger;
-	private String loggerID;
-	
-	private final GearmanConnectionManager gcm;
-	private final LinkedBlockingQueue<GearmanService> services = new LinkedBlockingQueue<GearmanService>();
-	
-	private final ScheduledExecutorService pool;
-	
-	public Gearman() throws IOException {
-		this(1,Logger.getAnonymousLogger());
-	}
-	
-	public Gearman(Logger logger) throws IOException {
-		this(1,logger);
-	}
-	
-	private Gearman(final int coreThreads, Logger logger) throws IOException {
-		ThreadPoolExecutor exe = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>());
-		exe.allowCoreThreadTimeOut(false);
-		exe.prestartCoreThread();
+	/**
+	 * Creates a new {@link Gearman} instance
+	 * @return
+	 * 		A new {@link Gearman} instance  
+	 */
+	public static Gearman createGearman() {
 		
-		final Scheduler s = new Scheduler(exe);
-		
-		this.pool = s;
-		
-		this.gcm = new GearmanConnectionManager(this.pool);
-		
-		this.logger = logger;
-		this.loggerID = GearmanLogger.getDefaultLoggerID(this);
-	}
-	
-	public void setLoggerLevel(Level newLevel) {
-		this.logger.setLevel(newLevel);
-	}
-		
-	public final GearmanServer createGearmanServer() {
-		final GearmanServer server = new ServerImpl(this);
-		this.services.add(server);
-		return server;
-	}
-	public final GearmanClient createGearmanClient() {
-		final GearmanClient client = new ClientImpl(this);
-		this.services.add(client);
-		return client;
-	}
-	public final GearmanWorker createGearmanWorker() {
-		final GearmanWorker worker = new WorkerImpl(this);
-		this.services.add(worker);
-		
-		return worker;
-	}
-	
-	final GearmanConnectionManager getGearmanConnectionManager() {
-		return gcm;		
-	}
-	
-	final Logger getLogger() {
-		return this.logger;
-	}
-
-	@Override
-	public Gearman getGearman() {
-		return this;
-	}
-
-	@Override
-	public boolean isShutdown() {
-		return this.gcm.isShutdown();
-	}
-
-	@Override
-	public void shutdown() {
-		for(GearmanService service : this.services) {
-			service.shutdown();
+		try {
+			final String className = GearmanProperties.getProperty(PropertyName.GEARMAN_CLASSNAME);
+			
+			final Class<?> implClass = Class.forName(className);
+			final Object o = implClass.newInstance();
+			
+			return (Gearman)o;
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+			
+			/*
+			 * If an exception occurs, there is something wrong with the class name or gearman
+			 * implementation. In both cases the issue is unrecoverable. An error must be thrown 
+			 */
+			
+			throw new Error("failed to initialize gearman",e);
 		}
-		
-		this.gcm.shutdown();
 	}
 	
-	final ScheduledExecutorService getPool() {
-		return this.pool;
-	}
+	/**
+	 * Returns the current java-gearman-service version
+	 * @return
+	 * 		The current version
+	 */
+	public abstract String getVersion();
 	
-	final void onServiceShutdown(GearmanService service) {
-		this.services.remove(service);
-	}
-
-	@Override
-	public void setLoggerID(String loggerId) {
-		this.loggerID = loggerId;
-	}
-
-	@Override
-	public String getLoggerID() {
-		return this.loggerID;
-	}
+	/**
+	 * Returns the default port number
+	 * @return
+	 * 		the default port number
+	 */
+	public abstract int getDefaultPort();
+	
+	/**
+	 * Starts a new local gearman job server running in the current address space, using
+	 * the default port
+	 * @return
+	 * 		A new gearman server instance
+	 * @throws IOException
+	 * 		If an IO exception occurs while attempting to open the default port
+	 * @see Gearman#getDefaultPort()
+	 */
+	public abstract GearmanServer startGearmanServer() throws IOException;
+	
+	/**
+	 * Starts a new local gearman job server running in the current address space. 
+	 * @param port
+	 * 		The port number this server will listen on.
+	 * @return
+	 * 		A new gearman server instance
+	 * @throws IOException
+	 * 		If an IO exception occurs while attempting to open the given port
+	 */
+	public abstract GearmanServer startGearmanServer(int port) throws IOException;
+	
+	/**
+	 * Starts a new local gearman job server running in the current address space. 
+	 * @param port
+	 * 		The port numbers this server should listen on.
+	 * @param persistence
+	 * 		An application hook used to tell the server how to persist jobs
+	 * @return
+	 * 		A new gearman server instance
+	 * @throws IOException
+	 * 		If an IO exception occurs while attempting to open the given port
+	 */
+	public abstract GearmanServer startGearmanServer(int port, GearmanPersistence persistence) throws IOException;
+	
+	/**
+	 * Creates an object representing a remote gearman job server
+	 * @param host
+	 * 		The address of the remote job server
+	 * @param port
+	 * 		The port number the job server is listening on
+	 * @return
+	 * 		An object representing a remote gearman job server
+	 */
+	public abstract GearmanServer createGearmanServer(String host, int port);
+	
+	/**
+	 * Creates a new gearman worker
+	 * @return
+	 * 		A new gearman worker
+	 */
+	public abstract GearmanWorker createGearmanWorker();
+	
+	/**
+	 * Creates a new {@link GearmanClient}
+	 * @return
+	 * 		a new gearman client
+	 */
+	public abstract GearmanClient createGearmanClient();
 }

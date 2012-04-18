@@ -1,8 +1,13 @@
+/*
+ * Copyright (C) 2012 by Isaiah van der Elst <isaiah.v@comcast.net>
+ * Use and distribution licensed under the BSD license.  See
+ * the COPYING file in the parent directory for full text.
+ */
+
 package org.gearman;
 
-
 /**
- * A GearmanFunction provides the interface to creates function that can be executed
+ * A GearmanFunction provides the interface to create functions that can be executed
  * by the {@link GearmanWorker}.
  * 
  * @author isaiah
@@ -10,37 +15,29 @@ package org.gearman;
 public interface GearmanFunction {
 
 	/**
-	 * The implementation of a gearman function. A GearmanFunction is registered
+	 * The working method of a gearman function. A GearmanFunction is registered
 	 * with a {@link GearmanWorker} to let it know when a job for this function
-	 * come in, to execute this method.<br>
+	 * comes in, to execute this method.<br>
 	 * <br>
-	 * If a runtime exception is thrown while executing the function. The job is
-	 * automatically put into the "completed" state and a FAIL response is
-	 * returned to the client.<br>
+	 * If a runtime exception is thrown while executing the function. The job
+	 * fails. A fail event is sent back to the client and the exception message
+	 * is logged on the local machine (worker size).<br>
 	 * <br>
 	 * If a null value is returned, it is assumed the execution was successful
 	 * but no data is to be sent back to the client.<br>
 	 * <br>
-	 * Once this method has returned, the GearmanJob parameter is put into a
-	 * "completed" state, any attempt to use the callback methods after the job
-	 * has been put into this state, an IllegalStateException will be thrown.
-	 * 
-	 * @param job
-	 * <br>
-	 *            The GearmanJob provides information needed to run the
-	 *            function. It also provides callback functionality, allowing
-	 *            the function to send data back to the client while the job is
-	 *            running.<br>
-	 * <br>
-	 *            It is important to know that once the function has finished,
-	 *            the GearmanJob is considered "completed" and the callback
-	 *            functionality is no longer valid. Any attempt to send callback
-	 *            data once in the completed state, and IllegalStateException is
-	 *            thrown <br>
-	 * @return Once this method has returned, the state of the job is
-	 *         "completed" and the result is forwarded to the client. A return
-	 *         value of null implies a successful execution with no data to
-	 *         return.
+	 * Once this method has returned, the job is complete. Calling any method from
+	 * the given {@link GearmanFunctionCallback} will result in an {@link IllegalStateException}
+	 * @param function
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param callback
+	 * 		An object used to send intermediate data back to the client while the job is executing
+	 * @return
+	 * 		The result data of the job's execution
+	 * @throws Exception
+	 * 		If the job's execution fails
 	 */
-	public GearmanJobResult work(GearmanJob job);
+	public byte[] work(String function, byte[] data, GearmanFunctionCallback callback) throws Exception;
 }

@@ -6,65 +6,33 @@ import org.gearman.Gearman;
 import org.gearman.GearmanServer;
 import org.gearman.GearmanWorker;
 
-/**
- * 
- * @author isaiah
- */
 public class EchoWorkerServer {
-	
-	public static void main(String[] args) throws IOException {
-		/*
-		 *  Create a Gearman instance
-		 */
-		final Gearman gearman = new Gearman();
+	public static void main(String...args) throws IOException {
 		
-		/*
-		 * Create a new job server that runs in the local address space
-		 */
-		final GearmanServer server = gearman.createGearmanServer();
+		// Create a new gearman instance
+		Gearman gearman = Gearman.createGearman();
 		
 		try {
 			
-			/*
-			 *  Tell the server to listen on the default port (4730)
-			 */
-			server.openPort();
+			// Create the job server object. This call starts a local job server. Throws IOException
+			GearmanServer server = gearman.startGearmanServer(EchoWorker.ECHO_PORT);
+
+			// Create a gearman worker
+			GearmanWorker worker = gearman.createGearmanWorker();
 			
-		} catch(IOException ioe) {
+			// Tell the worker how to perform the echo function
+			worker.addFunction(EchoWorker.ECHO_FUNCTION_NAME, new EchoWorker());
 			
-			/*
-			 *  If we fail to open the port, we'll terminate the application  
-			 */
+			// Tell the worker that it may communicate with the given job server
+			worker.addServer(server);
 			
-			// Print the problem
-			System.err.println(ioe);
+		} catch (IOException ioe) {
 			
-			// Shutdown the gearman service
+			// If an exception occurs, make sure the gearman service is shutdown
 			gearman.shutdown();
 			
-			// exit main thread
-			return;
+			// forward exception
+			throw ioe;
 		}
-		
-		/*
-		 *  Create a new GearmanWorker
-		 */
-		final GearmanWorker worker = gearman.createGearmanWorker();
-		
-		/*
-		 *  Tell the worker that it can communicate with the server running in
-		 *  the local address space. Communication is done locally, without a
-		 *  TCP socket
-		 *  
-		 *  See the method "setLostConnectionPolicy(GearmanLostConnectionPolicy)"
-		 *  for information about getting connection failure notification
-		 */
-		worker.addServer(server);
-		
-		/*
-		 *  Tell the worker how to perform the "echo" function by passing it a
-		 *  GearmanFunction that echos strings
-		 */
-		worker.addFunction("echo", new EchoWorker());
 	}
 }

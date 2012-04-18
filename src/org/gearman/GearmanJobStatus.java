@@ -1,27 +1,16 @@
+/*
+ * Copyright (C) 2012 by Isaiah van der Elst <isaiah.v@comcast.net>
+ * Use and distribution licensed under the BSD license.  See
+ * the COPYING file in the parent directory for full text.
+ */
+
 package org.gearman;
 
-import org.gearman.core.GearmanCallbackResult;
-
+/**
+ * An immutable object specifying a job's status at a 
+ * @author isaiah
+ */
 public interface GearmanJobStatus {
-	public static enum StatusCallbackResult implements GearmanCallbackResult {
-		SUCCESS,
-		SERVER_NOT_AVAILABLE,
-		SERVER_DROPPED,
-		CONNECTION_FAILED,
-		SERVER_DISCONNECTED,
-		WORK_COMPLETE,
-		SEND_FAILED;
-
-		@Override
-		public boolean isSuccessful() {
-			return this.equals(SUCCESS);
-		}
-	}
-
-	public interface StatusResult extends GearmanCallbackResult {		
-		public GearmanJobStatus getGearmanJobStatus();
-		public StatusCallbackResult getStatusCallbackResult();
-	}
 	
 	/**
 	 * Tests if the server knew the status of the job in question.
@@ -33,7 +22,7 @@ public interface GearmanJobStatus {
 	 * polled the job
 	 * 
 	 * @return
-	 * 		
+	 * 		<code>true</code> if the server knows the status of the job in question
 	 */
 	public boolean isKnown();
 	
@@ -51,12 +40,14 @@ public interface GearmanJobStatus {
 	/**
 	 * The percent complete numerator.
 	 * @return
+	 * 		the percent complete numerator.
 	 */
 	public long getNumerator();
 	
 	/**
 	 * The percent complete denominator.
 	 * @return
+	 * 		the percent complete denominator.
 	 */
 	public long getDenominator();
 }

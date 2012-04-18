@@ -14,71 +14,86 @@
                    
      isaiah.v                                                                
      ====================================================================== -->
-<project name="Java Gearman Service" default="build-all">
-    
-	<description>
-        Gearman provides a generic application framework to farm out work to
-    	other machines or processes that are better suited to do the work.
-    	It allows you to do work in parallel, to load balance processing, and
-    	to call functions between languages. It can be used in a variety of
-    	applications, from high-availability web sites to the transport of
-    	database replication events. In other words, it is the nervous system
-    	for how distributed processing communicates.
-    </description>
-	
-	<!-- project name -->
-	<property name="project" value="java-gearman-service" />
-	
-	<!-- current version number -->
-	<property name="version" value="0.5.1" />
-	
-	<!-- source directory -->
-	<property name="src" location="src" />
-	
-	<!-- build directory -->
-	<property name="build" location="bin" />
-	
-	<!-- Javadoc home directory -->
-	<property name="javadoc" location="javadoc" />
 
-    <!-- Builds the executable jar, creates javadocs, and zips source -->
-	<target name="build-all">
-    	<antcall target="jar" />
-	<antcall target="javadoc" />
-    </target>
+<project name="java-gearman-service" default="zipbuild" basedir="." >
 	
-	<!-- Builds the project's executable jar -->
-	<target name="jar" depends="build" description="Builds the project's executable jar">
-		<jar destfile="${basedir}/${project}-${version}.jar" >
-			<fileset dir="${build}" />
-			<fileset dir="${src}" />
+	<!-- Current Project Version -->
+	<property name="version" value="0.6a" />
+	
+	<property name="build" location="./../builds/${ant.project.name}/${version}" />
+	<property name="build.src" location="${build}/src" />
+	<property name="build.bin" location="${build}/bin" />
+	<property name="build.javadoc" location="${build}/javadoc" />
+	
+	<property name="fullname" value="${ant.project.name}-${version}" />
+	
+	<property name="javac.target" value="1.7" />
+	
+	<property name="project.src" location="./src" />
+	<property name="project.lib" location="./lib" />
+	
+	
+	<path id="jgs.classpath">
+		<pathelement location="${project.lib}/slf4j-api-1.6.4.jar" />
+	</path>
+
+	
+	<target depends="clean" name="init" >
+		<mkdir dir="${build.src}" />
+		<mkdir dir="${build.bin}" />
+		<mkdir dir="${build.javadoc}" />
+	</target>
+	
+	<target name="clean">
+		<delete dir="${build.src}" />
+		<delete dir="${build.bin}" />
+		<delete dir="${build.javadoc}" />
+	</target>
+	
+	<target depends="init" name="copy">
+		<filter token="project.name" value="${ant.project.name}" />
+		<filter token="project.version" value="${version}" />
+		
+		<copy todir="${build.src}" includeEmptyDirs="false" filtering="true">
+			<fileset dir="${project.src}" includes="**/*.java"/>  
+		</copy>
+		<copy todir="${build.src}" includeEmptyDirs="false" filtering="false">
+			<fileset dir="${project.src}" excludes="**/*.java"/>  
+		</copy>
+	</target>
+	
+	<target depends="copy" name="javadoc">
+		<javadoc destdir="${build.javadoc}" sourcepath="${build.src}" packagenames="org.gearman">
+			<classpath refid="jgs.classpath" />
+		</javadoc>
+	</target>
+	
+	<target name="zipbuild" depends="jar, javadoc">
+		<zip destfile="${build}/${fullname}.zip">
+			<zipfileset dir="${build.javadoc}" prefix="javadoc"/>
+				<zipfileset dir="${build.src}" prefix="src"/>
+			<zipfileset dir="${project.lib}" prefix="lib"/>
+			<fileset file="${build}/${fullname}.jar" />
+			<fileset file="License.txt" />
+		</zip>
+	</target>
+	
+	<target depends="build" name="jar">
+		<jar destfile="${build}/${fullname}.jar" >
+			<fileset dir="${build.bin}" />
 			<fileset file="License.txt" />
 			<manifest>
-				<attribute name="Main-Class" value="org.gearman.Main"/>
+				<attribute name="Main-Class" value="org.gearman.impl.Main"/>
+				<attribute name="Project" value="${ant.project.name}"/>
+				<attribute name="Version" value="${version}"/>
 			</manifest>
 		</jar>
-    </target>
-	
-	<!-- Creates the javadocs -->
-	<target name="javadoc">
-		<mkdir dir="${javadoc}"/>
-		<javadoc destdir="${javadoc}" sourcepath="${src}" packagenames="org.gearman/*" />
-	</target>
-
-	<target name="test">
-		<!-- TODO -->
 	</target>
 	
-	<!-- Compiles the project -->
-	<target name="build" description="Compiles the project">
-		<mkdir dir="${build}" />
-		<javac destdir="${build}" srcdir="${src}" />
+	<target depends="copy" name="build">
+		<javac destdir="${build.bin}" srcdir="${build.src}" target="${javac.target}" source="${javac.target}" includeantruntime="false" >
+			<classpath refid="jgs.classpath" />
+		</javac>
 	</target>
 	
-	<!-- Cleans project folder -->
-	<target name="clean" description="Cleans project folder">
-		<delete dir="${build}" />
-		<delete dir="${javadoc}" />
-	</target>
-
 </project>

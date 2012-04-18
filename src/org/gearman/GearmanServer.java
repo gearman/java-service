@@ -1,80 +1,44 @@
+/*
+ * Copyright (C) 2012 by Isaiah van der Elst <isaiah.v@comcast.net>
+ * Use and distribution licensed under the BSD license.  See
+ * the COPYING file in the parent directory for full text.
+ */
+
 package org.gearman;
 
-import java.io.IOException;
-import java.util.Set;
+import java.util.Collection;
 
-import org.gearman.core.GearmanCallbackHandler;
-import org.gearman.core.GearmanCallbackResult;
-import org.gearman.core.GearmanCodec;
-import org.gearman.core.GearmanConnectionHandler;
-
+/**
+ * The gearman job server receives jobs from the client and distributes them to available workers
+ * @author isaiah
+ */
 public interface GearmanServer extends GearmanService {
 	
-	public static enum ConnectCallbackResult implements GearmanCallbackResult{
-		SERVER_SHUTDOWN;
-
-		@Override
-		public boolean isSuccessful() {
-			return false;
-		}
-	}
-	
 	/**
-	 * Attempts to open the default port to listen on
-	 * @throws IOException
-	 * 		thrown if opening the port fails
-	 */
-	public void openPort() throws IOException;
-	
-	/**
-	 * Attempts to open and listen on a given port.
-	 * @param port
-	 * 		The port to open
-	 * @throws IOException
-	 * 		thrown if opening the port fails
-	 */
-	public void openPort(final int port) throws IOException;
-	
-	/**
-	 * Attempts to open and listen on a given port.<br>
-	 * <br>
-	 * Allows the user specifies the GearmanCodec used on this port.   
-	 * @param port
-	 * 		The port to open
-	 * @param codec
-	 * 		The codec to use for encoding and decoding GearmanPackets
-	 * @throws IOException
-	 * 		thrown if opening the port fails
-	 */
-	public <X> void openPort(final int port, final GearmanCodec<X> codec) throws IOException;
-	
-	/**
-	 * Attempts to close a port that this GearmanServer is listening on.
-	 * @param port
-	 * 		The port to close
+	 * Tests if this GearmanServer is running within this process.
 	 * @return
-	 * 		<code>true</code> if and only if the this GearmanServer secedes at closing
-	 * 		the given port number
+	 * 		<code>true</code> if this server is running in the local address space 
 	 */
-	public boolean closePort(final int port);
+	public boolean isLocalServer();
 	
 	/**
-	 * Closes all ports currently opened by this GearmanServer
-	 */
-	public void closeAllPorts();
-	
-	/**
-	 * Returns a set of Integers representing the all of the open ports 
+	 * Returns the port numbers the server is listening on
 	 * @return
-	 * 		a set of Integers representing the all of the open ports
+	 * 		The port number the server is listening on
 	 */
-	public Set<Integer> getOpenPorts();
+	public Collection<Integer> getPorts();
 	
 	/**
-	 * Returns a local connection to this GearmanServer
+	 * Returns the host name for this server instance.
 	 * @return
-	 * 		A local connection to this GearmanServer
+	 * 		The host name for this server instance
 	 */
-	public <A> void createGearmanConnection(GearmanConnectionHandler<A> handler, GearmanCallbackHandler<GearmanServer, ConnectCallbackResult> failHandler);
+	public String getHostName();
+	
+	/**
+	 * The server ID
+	 * @return
+	 * 		The server ID
+	 */
+	public String getServerID();
 }
-
