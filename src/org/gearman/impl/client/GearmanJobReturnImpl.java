@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.gearman.GearmanJobEvent;
 import org.gearman.GearmanJobReturn;
 
-public class GearmanJobReturnImpl implements GearmanJobReturn {
+public class GearmanJobReturnImpl implements GearmanJobReturn, BackendJobReturn {
 
 	private boolean isEOF = false;
 	private final Deque<GearmanJobEvent> eventList = new LinkedList<>();
@@ -50,6 +50,7 @@ public class GearmanJobReturnImpl implements GearmanJobReturn {
 		return this.eventList.pollFirst();
 	}
 	
+	@Override
 	public synchronized void put(GearmanJobEvent event) {
 		if(this.isEOF)
 			throw new IllegalStateException();
@@ -58,6 +59,7 @@ public class GearmanJobReturnImpl implements GearmanJobReturn {
 		this.notifyAll();
 	}
 	
+	@Override
 	public synchronized void eof(GearmanJobEvent lastevent) {
 		if(this.isEOF)
 			throw new IllegalStateException();

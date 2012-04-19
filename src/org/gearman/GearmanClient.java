@@ -38,6 +38,9 @@ public interface GearmanClient extends GearmanService {
 	 */
 	public GearmanJobReturn submitJob(String functionName, byte[] data);
 	
+	public <A> void submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
+	public <A> void submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	
 	/**
 	 * Sends a job to a registered job server.
 	 * @param functionName
@@ -61,6 +64,9 @@ public interface GearmanClient extends GearmanService {
 	 * 		The job return used to poll submit status
 	 */
 	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data);
+	
+	public <A> void submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
+	public <A> void submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Submits a background job to a registered job server

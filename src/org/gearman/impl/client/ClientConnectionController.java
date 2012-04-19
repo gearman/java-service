@@ -26,7 +26,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 	/**
 	 * The set of executing jobs. The key is the job's handle and the value is the job itself
 	 */
-	private final ConcurrentHashMap<ByteArray, GearmanJobReturnImpl> jobs = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<ByteArray, BackendJobReturn> jobs = new ConcurrentHashMap<>();
 	private ClientJobSubmission pendingJob = null;
 	
 	private long responceTimeout = Long.MAX_VALUE;
@@ -50,9 +50,9 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 			this.pendingJob = null;
 		}
 		
-		Iterator<GearmanJobReturnImpl> it = this.jobs.values().iterator();
+		Iterator<BackendJobReturn> it = this.jobs.values().iterator();
 		while(it.hasNext()) {
-			GearmanJobReturnImpl jobReturn = it.next();
+			BackendJobReturn jobReturn = it.next();
 			it.remove();
 			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_JOB_DISCONNECT);
 		}
@@ -158,7 +158,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 	
 	private final void workWarning(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJobReturnImpl jobReturn = this.jobs.get(jobHandle);
+		final BackendJobReturn jobReturn = this.jobs.get(jobHandle);
 		
 		if(jobReturn==null) {
 			GearmanConstants.LOGGER.warn("Unexspected Packet : WORK_WARNING : "+ jobHandle.toString(GearmanConstants.CHARSET));
@@ -171,7 +171,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 	
 	private final void workData(final GearmanPacket packet) {
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJobReturnImpl jobReturn = this.jobs.get(jobHandle);
+		final BackendJobReturn jobReturn = this.jobs.get(jobHandle);
 		
 		if(jobReturn==null) {
 			GearmanConstants.LOGGER.warn("Unexspected Packet : WORK_DATA : "+ jobHandle.toString(GearmanConstants.CHARSET));
@@ -208,7 +208,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 		/*
 		 * Note: synchronization is not needed here.
 		 */
-		final GearmanJobReturnImpl jobReturn = this.jobs.remove(jobHandle);
+		final BackendJobReturn jobReturn = this.jobs.remove(jobHandle);
 		if(this.jobs.isEmpty()) {
 			this.idleTimeout = System.currentTimeMillis();
 		}
@@ -229,7 +229,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 			this.pendingJob = null;
 		}
 		
-		GearmanJobReturnImpl jobReturn = jobSub.jobReturn;
+		BackendJobReturn jobReturn = jobSub.jobReturn;
 		
 		final byte[] jobHandle = packet.getArgumentData(0);
 		
@@ -246,7 +246,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 	private final void workStatus(final GearmanPacket packet) {
 		
 		final ByteArray jobHandle = new ByteArray(packet.getArgumentData(0));
-		final GearmanJobReturnImpl jobReturn = ClientConnectionController.this.jobs.get(jobHandle);
+		final BackendJobReturn jobReturn = ClientConnectionController.this.jobs.get(jobHandle);
 		
 		if(jobReturn==null) {
 			GearmanConstants.LOGGER.warn("Unexspected Packet : WORK_STATUS : "+ jobHandle.toString(GearmanConstants.CHARSET));
@@ -273,7 +273,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 		/*
 		 * Note: synchronization is not needed here.
 		 */
-		final GearmanJobReturnImpl jobReturn = this.jobs.remove(jobHandle);
+		final BackendJobReturn jobReturn = this.jobs.remove(jobHandle);
 		if(this.jobs.isEmpty()) {
 			this.idleTimeout = System.currentTimeMillis();
 		}

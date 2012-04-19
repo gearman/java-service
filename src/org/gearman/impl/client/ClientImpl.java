@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.gearman.GearmanClient;
 import org.gearman.GearmanJobEvent;
+import org.gearman.GearmanJobEventCallback;
 import org.gearman.GearmanJobPriority;
 import org.gearman.GearmanJobReturn;
 import org.gearman.GearmanJobStatus;
@@ -402,18 +403,46 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 		return submitJob(functionName, data, priority, true);
 	}
 	
-	public GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
+	private GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
 		final GearmanJobReturnImpl jobReturn = new GearmanJobReturnImpl();
-		
+		submitJob(jobReturn, functionName, data, priority, isBackground);
+		return jobReturn;
+	}
+	
+	private void submitJob(BackendJobReturn jobReturn, String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
 		if(this.isShutdown()) {
 			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_SERVICE_SHUTDOWN);
-			return jobReturn;
+			return;
 		} else if (super.getServerCount()==0) {
 			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_SERVER_NOT_AVAILABLE);
-			return jobReturn;
+			return;
 		}
 		
 		this.addJob(new ClientJobSubmission(functionName, data, GearmanUtils.createUID() , jobReturn, priority, isBackground));
-		return jobReturn;
+	}
+
+	@Override
+	public <A> void submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback) {
+		submitJob(functionName, data, GearmanJobPriority.NORMAL_PRIORITY, false, attachment, callback);
+	}
+
+	@Override
+	public <A> void submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback) {
+		submitJob(functionName, data, priority, false, attachment, callback);
+	}
+
+	@Override
+	public <A> void submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback) {
+		submitJob(functionName, data, GearmanJobPriority.NORMAL_PRIORITY, true, attachment, callback);
+	}
+
+	@Override
+	public <A> void submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback) {
+		submitJob(functionName, data, priority, true, attachment, callback);
+	}
+	
+	private <A> void submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground, A attachment, GearmanJobEventCallback<A> callback) {
+		final GearmanJobEventCallbackCaller<A> jobReturn = new GearmanJobEventCallbackCaller<A>(attachment, callback, this.getGearman().getScheduler());
+		submitJob(jobReturn, functionName, data, priority, isBackground);
 	}
 }
