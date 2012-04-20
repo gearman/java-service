@@ -438,6 +438,10 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 	}
 	
 	private void submitJob(BackendJobReturn jobReturn, String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
+		if(functionName==null) throw new NullPointerException();
+		if(data==null) data = new byte[0];
+		if(priority==null) priority = GearmanJobPriority.NORMAL_PRIORITY;
+		
 		if(this.isShutdown()) {
 			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_SERVICE_SHUTDOWN);
 			return;
@@ -470,6 +474,8 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 	}
 	
 	private <A> GearmanJoin<A> submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground, A attachment, GearmanJobEventCallback<A> callback) {
+		if(callback==null) throw new NullPointerException();
+		
 		final GearmanJobEventCallbackCaller<A> jobReturn = new GearmanJobEventCallbackCaller<A>(attachment, callback, this.getGearman().getScheduler());
 		submitJob(jobReturn, functionName, data, priority, isBackground);
 		return jobReturn;

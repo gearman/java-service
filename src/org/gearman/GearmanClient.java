@@ -56,6 +56,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		gearman job data
 	 * @return
 	 * 		The job return used to poll result data
+	 * @throws NullPointerException
+	 * 		if the function name is <code>null</code>
 	 */
 	public GearmanJobReturn submitJob(String functionName, byte[] data);
 	
@@ -70,7 +72,9 @@ public interface GearmanClient extends GearmanService {
 	 * @param callback
 	 * 		An asynchronous callback object used to receive result data
 	 * @return
-	 * 		A joining object used to synchronize jobs 
+	 * 		A joining object used to synchronize jobs
+	 * @throws NullPointerException
+	 * 		if the function name is <code>null</code> or the callback is null
 	 */
 	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
@@ -84,6 +88,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		gearman job priority
 	 * @return
 	 * 		The job return used to poll result data
+	 * @throws NullPointerException
+	 * 		if the function name is <code>null</code>
 	 */
 	public GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority);
 	
@@ -101,6 +107,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		An asynchronous callback object used to receive result data
 	 * @return
 	 * 		A joining object used to synchronize jobs
+	 * @throws NullPointerException
+	 * 		If the function name or callback is <code>null</code>
 	 */
 	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	
@@ -112,6 +120,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		gearman job data
 	 * @return
 	 * 		The job return used to poll submit operation status
+	 * @throws NullPointerException
+	 * 		If the function name is <code>null</code>
 	 */
 	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data);
 	
@@ -127,6 +137,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		An asynchronous callback object used to receive submit operation status
 	 * @return
 	 * 		A joining object used to synchronize jobs
+	 * @throws NullPointerException
+	 * 		if the function name or callback is <code>null</code>
 	 */
 	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
@@ -140,6 +152,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		gearman job priority
 	 * @return
 	 * 		The job return used to poll submit operation status
+	 * @throws NullPointerException
+	 * 		If the function name is <code>null</code>
 	 */
 	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority);
 	
@@ -157,6 +171,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		An asynchronous callback object used to receive submit operation status
 	 * @return
 	 * 		A joining object used to synchronize jobs
+	 * @throws NullPointerException
+	 * 		if the function name or callback is <code>null</code>
 	 */
 	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	

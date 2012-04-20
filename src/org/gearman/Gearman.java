@@ -79,7 +79,7 @@ public abstract class Gearman implements GearmanService {
 	public abstract String getVersion();
 
 	/**
-	 * Returns the default port number
+	 * Returns the default port number used by this system
 	 * 
 	 * @return the default port number
 	 */
