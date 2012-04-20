@@ -17,8 +17,7 @@
 
 <project name="java-gearman-service" default="zipbuild" basedir="." >
 	
-	<!-- Current Project Version -->
-	<property name="version" value="0.6.0.r125" />
+	<fail message="'version' not defined" unless="version" />
 	
 	<property name="build" location="./../builds/${ant.project.name}/${version}" />
 	<property name="build.src" location="${build}/src" />

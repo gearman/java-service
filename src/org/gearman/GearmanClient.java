@@ -38,8 +38,20 @@ public interface GearmanClient extends GearmanService {
 	 */
 	public GearmanJobReturn submitJob(String functionName, byte[] data);
 	
-	public <A> void submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
-	public <A> void submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	/**
+	 * Sends a job to a registered job server.
+	 * @param functionName
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param attachment
+	 * 		An object used to identify this job from within the 
+	 * @param callback
+	 * 		An asynchronous callback object used to receive result data
+	 * @return
+	 * 		A joining object used to synchronize jobs 
+	 */
+	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Sends a job to a registered job server.
@@ -55,18 +67,47 @@ public interface GearmanClient extends GearmanService {
 	public GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority);
 	
 	/**
+	 * Sends a job to a registered job server.
+	 * @param functionName
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param priority
+	 * 		gearman job priority
+	 * @param attachment
+	 * 		An object used to identify this job from within the
+	 * @param callback
+	 * 		An asynchronous callback object used to receive result data
+	 * @return
+	 * 		A joining object used to synchronize jobs
+	 */
+	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	
+	/**
 	 * Submits a background job to a registered job server
 	 * @param functionName
 	 * 		gearman function name
 	 * @param data
 	 * 		gearman job data
 	 * @return
-	 * 		The job return used to poll submit status
+	 * 		The job return used to poll submit operation status
 	 */
 	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data);
 	
-	public <A> void submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
-	public <A> void submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	/**
+	 * Submits a background job to a registered job server
+	 * @param functionName
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param attachment
+	 * 		An object used to identify this job from within the
+	 * @param callback
+	 * 		An asynchronous callback object used to receive submit operation status
+	 * @return
+	 * 		A joining object used to synchronize jobs
+	 */
+	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Submits a background job to a registered job server
@@ -77,9 +118,26 @@ public interface GearmanClient extends GearmanService {
 	 * @param priority
 	 * 		gearman job priority
 	 * @return
-	 * 		The job return used to poll submit status
+	 * 		The job return used to poll submit operation status
 	 */
 	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority);
+	
+	/**
+	 * Submits a background job to a registered job server
+	 * @param functionName
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param priority
+	 * 		gearman job priority
+	 * @param attachment
+	 * 		An object used to identify this job from within the
+	 * @param callback
+	 * 		An asynchronous callback object used to receive submit operation status
+	 * @return
+	 * 		A joining object used to synchronize jobs
+	 */
+	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Adds a {@link GearmanServer} to the service.<br>
