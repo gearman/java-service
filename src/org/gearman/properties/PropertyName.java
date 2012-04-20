@@ -35,7 +35,7 @@ public enum PropertyName {
 	GEARMAN_PORT("gearman.port", "4730"),
 	
 	/** The amount of time a thread must be ideal before it can die */
-	GEARMAN_THREADTIMEOUT("gearman.threadtimeout", "60000"),
+	GEARMAN_THREADTIMEOUT("gearman.threadtimeout", "30000"),
 	
 	GEARMAN_LOGGER_NAME("gearman.loggername", "gearman"),
 	

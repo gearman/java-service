@@ -324,7 +324,7 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 
 	@Override
 	public void onPacketReceived(GearmanPacket packet, GearmanConnection<Client> conn) {
-		GearmanConstants.LOGGER.info(GearmanUtils.toString(conn) + " : IN : " + packet.getPacketType().toString());
+		GearmanConstants.LOGGER.info(GearmanUtils.toString(conn) + " : IN  : " + packet.getPacketType().toString());
 		
 		assert packet!=null;
 		assert conn.getAttachment()!=null;
@@ -338,6 +338,8 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 
 	@Override
 	public void onDisconnect(GearmanConnection<Client> conn) {
+		GearmanConstants.LOGGER.info(GearmanUtils.toString(conn) + " : Disconnected");
+		
 		Client client = conn.getAttachment();
 		conn.setAttachment(null);
 		if(client!=null) {

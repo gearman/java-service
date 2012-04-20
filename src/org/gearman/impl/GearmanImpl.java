@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -48,6 +49,7 @@ import org.gearman.impl.client.ClientImpl;
 import org.gearman.impl.core.GearmanConnectionManager;
 import org.gearman.impl.server.local.GearmanServerLocal;
 import org.gearman.impl.server.remote.GearmanServerRemote;
+import org.gearman.impl.util.GearmanThreadFactory;
 import org.gearman.impl.util.Scheduler;
 import org.gearman.impl.worker.GearmanWorkerImpl;
 
@@ -73,11 +75,13 @@ public final class GearmanImpl extends Gearman {
 		if(coreThreads<=0)
 			throw new IllegalArgumentException("GearmanImpl needs 1 or more threads");
 		
-		final ThreadPoolExecutor pool = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, GearmanConstants.THREAD_TIMEOUT, TimeUnit.MILLISECONDS, new SynchronousQueue<Runnable>());
+		final ThreadFactory threadFactory = new GearmanThreadFactory();
+		
+		final ThreadPoolExecutor pool = new ThreadPoolExecutor(coreThreads, Integer.MAX_VALUE, GearmanConstants.THREAD_TIMEOUT, TimeUnit.MILLISECONDS, new SynchronousQueue<Runnable>(), threadFactory);
 		pool.allowCoreThreadTimeOut(false);
 		pool.prestartCoreThread();
 		
-		this.scheduler = new Scheduler(pool); 
+		this.scheduler = new Scheduler(pool, threadFactory); 
 		this.connectionManager = new GearmanConnectionManager(scheduler);
 	}
 

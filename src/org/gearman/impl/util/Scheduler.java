@@ -234,7 +234,7 @@ public class Scheduler implements ScheduledExecutorService {
 	/** The thread running the driver. If null, nothing is executing the driver */
 	private Thread thread = null;
 	/** The factory for creating threads */
-	private ThreadFactory threadFactory = Executors.defaultThreadFactory();
+	private ThreadFactory threadFactory;
 	/** The amount of time, in nanoseconds, a thread can be ideal before being terminated */
 	private long threadTimeout = 60000000000L;	// 60 seconds
 	/** If true the driving thread can timeout, otherwise it cannot */
@@ -263,8 +263,13 @@ public class Scheduler implements ScheduledExecutorService {
 	 * 		The {@link ExecutorService} that tasks will be submitted to.
 	 */
 	public Scheduler(final ExecutorService executor) {
+		this(executor, Executors.defaultThreadFactory());
+	}
+	
+	public Scheduler(final ExecutorService executor, ThreadFactory threadfactory) {
 		if(executor==null || executor.isShutdown()) throw new IllegalArgumentException("invalid executor");
 		this.executor = executor;
+		this.threadFactory = threadfactory;
 	}
 
 	@Override
