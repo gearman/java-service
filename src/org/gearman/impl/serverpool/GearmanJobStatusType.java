@@ -27,7 +27,8 @@
 
 package org.gearman.impl.serverpool;
 
-public enum GearmanJobStatusFailureType {
+public enum GearmanJobStatusType {
+	SUCCESS,
 	SERVER_NOT_AVAILABLE,
 	SERVER_DROPPED,
 	CONNECTION_FAILED,

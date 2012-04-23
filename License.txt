@@ -1,4 +1,4 @@
-Java Gearman Service
+java-gearman-service
 Copyright (c) 2012, Isaiah van der Elst (isaiah.v@comcast.net)
 All rights reserved.
 

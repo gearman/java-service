@@ -41,6 +41,8 @@ import org.gearman.impl.core.GearmanConnection.SendCallbackResult;
 import org.gearman.impl.core.GearmanPacket.Magic;
 import org.gearman.impl.core.GearmanPacket.Type;
 import org.gearman.impl.util.ByteArray;
+import org.gearman.properties.GearmanProperties;
+import org.gearman.properties.PropertyName;
 
 abstract class JobAbstract implements Job, ClientDisconnectListener {
 	
@@ -283,7 +285,6 @@ abstract class JobAbstract implements Job, ClientDisconnectListener {
 		
 		worker.addDisconnectListener(this);
 		
-		//TODO does not send UniqueID
 		worker.sendPacket(this.createJobAssignUniqPacket(), new GearmanCallbackHandler<GearmanPacket, org.gearman.impl.core.GearmanConnection.SendCallbackResult>(){
 			@Override
 			public void onComplete(GearmanPacket data, SendCallbackResult result) {
@@ -321,22 +322,17 @@ abstract class JobAbstract implements Job, ClientDisconnectListener {
 	 * 		The prefix for the job handle
 	 */
 	private static final byte[] initJobHandle() {
-		byte[] user;
+		String user;
 		try {
-			user = java.net.InetAddress.getLocalHost().getHostName().getBytes(GearmanConstants.CHARSET);
+			user = java.net.InetAddress.getLocalHost().getHostName();
 			//user = System.getProperty("user.name").getBytes("UTF-8");
 		} catch (UnknownHostException e) {
 			assert false;
 			return null;
 		}
 		
-		final byte[] prefix = new byte[user.length + 3];
-		prefix[0]='H';
-		prefix[1]=':';
-		System.arraycopy(user, 0, prefix, 2, user.length);
-		prefix[user.length+2]=':';
-		
-		return prefix;
+		String prefixStr = GearmanProperties.getProperty(PropertyName.GEARMAN_JOB_HANDLE_PREFIX);
+		return (prefixStr + ':' + user + ':').getBytes(GearmanConstants.CHARSET);
 	}
 	
 	

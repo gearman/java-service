@@ -46,7 +46,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws IOException
 	 * 		If an I/O exception occurs while performing this operation 
 	 */
-	public GearmanJobStatus getStatus(byte[] jobHandle) throws IOException;
+	public GearmanJobStatus getStatus(byte[] jobHandle);
 	
 	/**
 	 * Sends a job to a registered job server.

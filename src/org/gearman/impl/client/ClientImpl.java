@@ -27,8 +27,8 @@
 
 package org.gearman.impl.client;
 
-import java.io.IOException;
 import java.util.Deque;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -48,7 +48,10 @@ import org.gearman.impl.GearmanImpl;
 import org.gearman.impl.server.GearmanServerInterface;
 import org.gearman.impl.serverpool.AbstractJobServerPool;
 import org.gearman.impl.serverpool.ControllerState;
+import org.gearman.impl.serverpool.GearmanJobStatusImpl;
+import org.gearman.impl.util.ByteArray;
 import org.gearman.impl.util.GearmanUtils;
+import org.gearman.impl.util.TaskJoin;
 
 public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnectionController> implements GearmanClient {
 
@@ -113,8 +116,6 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 				default:
 					assert false;
 				}
-				
-				ClientImpl.this.addController(this);
 			}
 		}
 
@@ -227,11 +228,7 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 	
 	private final void addController(final InnerConnectionController icc) {
 		synchronized(this.open) {
-			assert (icc.getState().equals(ControllerState.CLOSED)
-				|| icc.getState().equals(ControllerState.CONNECTING));
-			
 			this.available.add(icc);
-			assert this.available.contains(icc);
 		}
 	}
 	
@@ -351,6 +348,8 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 				
 				this.failTo(cjs, GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_CONNECTION_FAILED);
 			}
+			
+			this.available.add(icc);
 		}
 	}
 	
@@ -405,10 +404,35 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public GearmanJobStatus getStatus(byte[] jobHandle) throws IOException {
-		// TODO support this operation
-		throw new UnsupportedOperationException();
+	public GearmanJobStatus getStatus(byte[] jobHandle) {
+		final ByteArray byteArray = new ByteArray(jobHandle);
+		
+		List<InnerConnectionController> avail;
+		
+		TaskJoin<GearmanJobStatus>[] taskJoins;
+		synchronized(this.open) {
+			taskJoins = new TaskJoin[this.open.size()];
+			int i=0;
+			for(InnerConnectionController icc : this.open) {
+				taskJoins[i] = icc.getStatus(byteArray);
+			}
+			avail = this.available.createList();
+		}
+		
+		for(TaskJoin<GearmanJobStatus> taskJoin : taskJoins) {
+			GearmanJobStatus jobStatus = taskJoin.getValue();
+			if(jobStatus.isKnown()) return jobStatus;
+		}
+		
+		for(InnerConnectionController icc : avail) {
+			TaskJoin<GearmanJobStatus> taskJoin = icc.getStatus(byteArray);
+			GearmanJobStatus jobStatus = taskJoin.getValue();
+			if(jobStatus.isKnown()) return jobStatus;
+		}
+		
+		return GearmanJobStatusImpl.NOT_KNOWN;
 	}
 
 	@Override

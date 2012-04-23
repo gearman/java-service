@@ -33,6 +33,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.gearman.GearmanJobStatus;
 import org.gearman.GearmanLostConnectionGrounds;
 import org.gearman.impl.GearmanConstants;
 import org.gearman.impl.core.GearmanCallbackHandler;
@@ -44,6 +45,7 @@ import org.gearman.impl.core.GearmanPacket;
 import org.gearman.impl.server.GearmanServerInterface;
 import org.gearman.impl.util.ByteArray;
 import org.gearman.impl.util.GearmanUtils;
+import org.gearman.impl.util.TaskJoin;
 
 public abstract class AbstractConnectionController implements ConnectionController, GearmanConnectionHandler<Object>, GearmanCallbackHandler<GearmanServerInterface , ConnectCallbackResult> {
 	private final AbstractJobServerPool<?> sc;
@@ -57,7 +59,7 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	
 	private final SendCallback defaultCallback;
 	
-	private HashMap<ByteArray, GearmanJobStatusCallback> pendingJobStatus; 
+	private HashMap<ByteArray, TaskJoin<GearmanJobStatus>> pendingJobStatus; 
 	
 	private final Object lock = new Object();
 	
@@ -144,13 +146,13 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				
 				if(this.pendingJobStatus!=null && !this.pendingJobStatus.isEmpty()) {
 					
-					for(Entry<ByteArray, GearmanJobStatusCallback> status : this.pendingJobStatus.entrySet()) {
+					for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> status : this.pendingJobStatus.entrySet()) {
 						final ByteArray jobHandle = status.getKey();
 						this.sendPacket(GearmanPacket.createGET_STATUS(jobHandle.getBytes()), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 							@Override
 							public void onComplete(GearmanPacket data, SendCallbackResult result) {
 								if(!result.isSuccessful()) {
-									AbstractConnectionController.this.completeJobStatus(GearmanJobStatusFailureType.SEND_FAILED, jobHandle, false, false, 0L, 0L);
+									AbstractConnectionController.this.completeJobStatus(GearmanJobStatusType.SEND_FAILED, jobHandle, false, false, 0L, 0L);
 								}
 							}
 						});
@@ -180,8 +182,9 @@ public abstract class AbstractConnectionController implements ConnectionControll
 			if(!this.isOpen() && !this.isClosePending()) return;
 			
 			if(this.pendingJobStatus!=null) {
-				for(Entry<ByteArray, GearmanJobStatusCallback> entry : this.pendingJobStatus.entrySet()) { 
-					entry.getValue().onFailure(entry.getKey(), GearmanJobStatusFailureType.SERVER_DISCONNECTED);
+				for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> entry : this.pendingJobStatus.entrySet()) {
+					// Server Disconnected
+					entry.getValue().setValue(GearmanJobStatusImpl.NOT_KNOWN);
 				}
 				
 				this.pendingJobStatus.clear();
@@ -204,8 +207,9 @@ public abstract class AbstractConnectionController implements ConnectionControll
 			assert this.conn==null;
 			
 			if(this.pendingJobStatus!=null) {
-				for(Entry<ByteArray, GearmanJobStatusCallback> entry : this.pendingJobStatus.entrySet()) {
-					entry.getValue().onFailure(entry.getKey(), GearmanJobStatusFailureType.CONNECTION_FAILED);
+				for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> entry : this.pendingJobStatus.entrySet()) {
+					// Connection Failed
+					entry.getValue().setValue(GearmanJobStatusImpl.NOT_KNOWN);
 				}
 				
 				this.pendingJobStatus.clear();
@@ -428,8 +432,9 @@ public abstract class AbstractConnectionController implements ConnectionControll
 			}
 			
 			if(this.pendingJobStatus!=null) {
-				for(Entry<ByteArray, GearmanJobStatusCallback> entry : this.pendingJobStatus.entrySet()) {
-					entry.getValue().onFailure(entry.getKey(), GearmanJobStatusFailureType.SERVER_DROPPED);
+				for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> entry : this.pendingJobStatus.entrySet()) {
+					// Server Dropped
+					entry.getValue().setValue(GearmanJobStatusImpl.NOT_KNOWN);
 				}
 				
 				this.pendingJobStatus.clear();
@@ -456,8 +461,9 @@ public abstract class AbstractConnectionController implements ConnectionControll
 			}
 			
 			if(this.pendingJobStatus!=null) {
-				for(Entry<ByteArray, GearmanJobStatusCallback> entry : this.pendingJobStatus.entrySet()) {
-					entry.getValue().onFailure(entry.getKey(), GearmanJobStatusFailureType.SERVER_DROPPED);
+				for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> entry : this.pendingJobStatus.entrySet()) {
+					// Server Dropped
+					entry.getValue().setValue(GearmanJobStatusImpl.NOT_KNOWN);
 				}
 				
 				this.pendingJobStatus.clear();
@@ -468,15 +474,24 @@ public abstract class AbstractConnectionController implements ConnectionControll
 		}
 	}
 	
-	public final void getStatus(final ByteArray jobHandle, GearmanJobStatusCallback callback) {
+	public final TaskJoin<GearmanJobStatus> getStatus(final ByteArray jobHandle) {
 		
 		synchronized(this.lock) {
-			if(this.isDropped()) return;
+			if(this.isDropped()) {
+				return new TaskJoin<>(GearmanJobStatusImpl.NOT_KNOWN);
+			}
 			
 			if(this.pendingJobStatus==null)
-				this.pendingJobStatus = new HashMap<ByteArray, GearmanJobStatusCallback>();
+				this.pendingJobStatus = new HashMap<ByteArray, TaskJoin<GearmanJobStatus>>();
 			
-			this.pendingJobStatus.put(jobHandle, callback);
+			TaskJoin<GearmanJobStatus> value = this.pendingJobStatus.get(jobHandle);
+			
+			if(value!=null)
+				return value;
+			else
+				value = new TaskJoin<>();
+			
+			this.pendingJobStatus.put(jobHandle, value);
 			
 			if(!(this.isOpen() || this.isClosePending())) {
 				this.openServer(true);
@@ -486,38 +501,44 @@ public abstract class AbstractConnectionController implements ConnectionControll
 					@Override
 					public void onComplete(GearmanPacket data, SendCallbackResult result) {
 						if(!result.isSuccessful()) {
-							AbstractConnectionController.this.completeJobStatus(GearmanJobStatusFailureType.SEND_FAILED, jobHandle, false, false, 0L, 0L);
+							AbstractConnectionController.this.completeJobStatus(GearmanJobStatusType.SEND_FAILED, jobHandle, false, false, 0L, 0L);
 						}
 					}
 				});
 			}
+			
+			return value;
 		}
 	}
 	
 	
 	private final void completeJobStatus(ByteArray jobHandle, boolean isKnown, boolean isRunning, long numerator, long denominator) {
 		synchronized(this.lock) {
-			final GearmanJobStatusCallback callback = this.pendingJobStatus.remove(jobHandle);
+			final TaskJoin<GearmanJobStatus> taskJoin = this.pendingJobStatus.remove(jobHandle);
 			
 			if(this.pendingJobStatus.isEmpty() && this.isClosePending()) {
 				this.pendingJobStatus = null;
 				this.closeServer();
 			}
 			
-			callback.onSuccess(jobHandle, new GearmanJobStatusImpl(isKnown, isRunning, numerator, denominator));
+			taskJoin.setValue(new GearmanJobStatusImpl(isKnown, isRunning, numerator, denominator));
 		}
 	}
 	
-	private final void completeJobStatus(GearmanJobStatusFailureType type, ByteArray jobHandle, boolean isKnown, boolean isRunning, long numerator, long denominator) {
+	private final void completeJobStatus(GearmanJobStatusType type, ByteArray jobHandle, boolean isKnown, boolean isRunning, long numerator, long denominator) {
 		synchronized(this.lock) {
-			final GearmanJobStatusCallback callback = this.pendingJobStatus.remove(jobHandle);
+			final TaskJoin<GearmanJobStatus> taskJoin = this.pendingJobStatus.remove(jobHandle);
 			
 			if(this.pendingJobStatus.isEmpty() && this.isClosePending()) {
 				this.pendingJobStatus = null;
 				this.closeServer();
 			}
 			
-			callback.onFailure(jobHandle, type);
+			if(!type.equals(GearmanJobStatusType.SUCCESS)) {
+				taskJoin.setValue(GearmanJobStatusImpl.NOT_KNOWN);
+			} else {
+				taskJoin.setValue(new GearmanJobStatusImpl(isKnown, isRunning, numerator, denominator));
+			}
 		}
 	}
 	

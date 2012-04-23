@@ -2,7 +2,7 @@
 
 <!-- ======================================================================                                                         
 
-     Java Gearman Service
+     java-gearman-service
          
      Gearman provides a generic application framework to farm out work to other
      machines or processes that are better suited to do the work. It allows you
@@ -12,19 +12,20 @@
      In other words, it is the nervous system for how distributed processing
      communicates.
                    
-     isaiah.v                                                                
+     isaiah.v
+     
      ====================================================================== -->
 
 <project name="java-gearman-service" default="zipbuild" basedir="." >
 	
-	<fail message="'version' not defined" unless="version" />
+	<fail message="'project.version' not defined" unless="project.version" />
 	
-	<property name="build" location="./../builds/${ant.project.name}/${version}" />
+	<property name="build" location="./../builds/${ant.project.name}/${project.version}" />
 	<property name="build.src" location="${build}/src" />
 	<property name="build.bin" location="${build}/bin" />
 	<property name="build.javadoc" location="${build}/javadoc" />
 	
-	<property name="fullname" value="${ant.project.name}-${version}" />
+	<property name="fullname" value="${ant.project.name}-${project.version}" />
 	
 	<property name="javac.target" value="1.7" />
 	
@@ -51,7 +52,7 @@
 	
 	<target depends="init" name="copy">
 		<filter token="project.name" value="${ant.project.name}" />
-		<filter token="project.version" value="${version}" />
+		<filter token="project.version" value="${project.version}" />
 		
 		<copy todir="${build.src}" includeEmptyDirs="false" filtering="true">
 			<fileset dir="${project.src}" includes="**/*.java"/>  
@@ -84,7 +85,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="org.gearman.impl.Main"/>
 				<attribute name="Project" value="${ant.project.name}"/>
-				<attribute name="Version" value="${version}"/>
+				<attribute name="Version" value="${project.version}"/>
 			</manifest>
 		</jar>
 	</target>

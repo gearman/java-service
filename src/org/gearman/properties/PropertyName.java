@@ -32,14 +32,16 @@ public enum PropertyName {
 	GEARMAN_CLASSNAME("gearman.classname", "org.gearman.impl.GearmanImpl"),
 	
 	/** The default gearman port number */
-	GEARMAN_PORT("gearman.port", "4730"),
+	GEARMAN_PORT("gearman.Port", "4730"),
 	
 	/** The amount of time a thread must be ideal before it can die */
-	GEARMAN_THREADTIMEOUT("gearman.threadtimeout", "30000"),
+	GEARMAN_THREADTIMEOUT("gearman.ThreadTimeout", "30000"),
 	
-	GEARMAN_LOGGER_NAME("gearman.loggername", "gearman"),
+	GEARMAN_LOGGER_NAME("gearman.LoggerName", "gearman"),
 	
-	GEARMAN_WORKER_THREADS("gearman.workerthreads", "1");
+	GEARMAN_WORKER_THREADS("gearman.WorkerThreads", "1"),
+	
+	GEARMAN_JOB_HANDLE_PREFIX("gearman.JobHandlePrefix", "H");
 	
 	public final String name;
 	public final String defaultValue;

@@ -29,7 +29,9 @@ package org.gearman.impl.serverpool;
 
 import org.gearman.GearmanJobStatus;
 
-class GearmanJobStatusImpl implements GearmanJobStatus {
+public class GearmanJobStatusImpl implements GearmanJobStatus {
+	
+	public static final GearmanJobStatus NOT_KNOWN = new GearmanJobStatusImpl(false, false, 0, 0);
 	
 	private final boolean isKnown;
 	private final boolean isRunning;

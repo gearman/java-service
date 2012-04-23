@@ -29,16 +29,18 @@ package org.gearman.impl.serverpool;
 
 import java.util.concurrent.TimeUnit;
 
+import org.gearman.GearmanJobStatus;
 import org.gearman.GearmanLostConnectionGrounds;
 import org.gearman.GearmanLostConnectionPolicy;
 import org.gearman.impl.core.GearmanCallbackHandler;
 import org.gearman.impl.core.GearmanPacket;
 import org.gearman.impl.core.GearmanConnection.SendCallbackResult;
 import org.gearman.impl.util.ByteArray;
+import org.gearman.impl.util.TaskJoin;
 
 public interface ConnectionController {
 	public ControllerState getControllerState();
-	public void getStatus(final ByteArray jobHandle, GearmanJobStatusCallback callback);
+	public TaskJoin<GearmanJobStatus> getStatus(final ByteArray jobHandle);
 	public void dropServer();
 	public void closeServer();
 	public void waitServer(Runnable callback);

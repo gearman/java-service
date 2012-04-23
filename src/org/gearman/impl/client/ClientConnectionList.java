@@ -27,6 +27,9 @@
 
 package org.gearman.impl.client;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author isaiah
  */
@@ -45,6 +48,12 @@ class ClientConnectionList <V, K> {
 	
 	private Node head = null;
 	private Node tail = null;
+	
+	private int size = 0;
+	
+	public int size() {
+		return size;
+	}
 	
 	public final synchronized boolean contains(final V value) {
 		Node n = this.head;
@@ -82,6 +91,7 @@ class ClientConnectionList <V, K> {
 		
 		head = null;
 		tail = null;
+		this.size = 0;
 	}
 	
 	public final synchronized boolean add(final V value) {
@@ -103,6 +113,8 @@ class ClientConnectionList <V, K> {
 			tail.next = node;
 			tail = node;
 		}
+		
+		size++;
 		return true;
 	}
 	
@@ -122,6 +134,8 @@ class ClientConnectionList <V, K> {
 			this.head.prev = node;
 			this.head = node;
 		}
+		
+		size++;
 		return true;
 	}
 	
@@ -144,16 +158,18 @@ class ClientConnectionList <V, K> {
 				if(n.failKey!=null)
 					n.prev.failKey = n.failKey;
 				
+				size--;
 				return null;		// removed value, fail key moved back 
 			} else {
 				assert n==this.head;
 				this.head = n.next;
 				
+				size--;
 				return n.failKey;	// removed value, fail key returned
 			}
 		}
 		
-		return null;	// Value no in structure
+		return null;	// Value not in structure
 	}
 	
 	public final synchronized V tryFirst(final K failKey) {
@@ -177,6 +193,7 @@ class ClientConnectionList <V, K> {
 		if(this.head!=null)
 			this.head.prev = null;
 		
+		size--;
 		return failKey;		
 	}
 	
@@ -184,5 +201,16 @@ class ClientConnectionList <V, K> {
 		for(Node n = this.head; n!=null; n=n.next) {
 			n.failKey = null;
 		}
+	}
+
+	public synchronized List<V>  createList() {
+		List<V> value = new ArrayList<V>(this.size);
+		
+		Node node = this.head;
+		for(;node!=null; node=node.next) {
+			value.add(node.value);
+		}
+		
+		return value;
 	}
 }

@@ -21,7 +21,12 @@ public class EchoClientAsynchronous implements GearmanJobEventCallback<String> {
 		
 		client.addServer(server);
 		
-		GearmanJoin<String> join = client.submitJob(EchoWorker.ECHO_FUNCTION_NAME, ("Hello World").getBytes(), EchoWorker.ECHO_FUNCTION_NAME, new EchoClientAsynchronous());
+		GearmanJoin<String> join = client.submitJob(
+				EchoWorker.ECHO_FUNCTION_NAME,
+				("Hello World").getBytes(),
+				EchoWorker.ECHO_FUNCTION_NAME,
+				new EchoClientAsynchronous()
+			);
 		
 		join.join();
 		
