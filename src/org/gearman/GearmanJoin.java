@@ -29,41 +29,57 @@ package org.gearman;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The GearmanJoin class is used to block the current thread until a job has
+ * completed and been completly proccessed. A call to the
+ * {@link GearmanJoin#join()} method will block until the
+ * {@link GearmanJobEventCallback} returns from processing the End-Of-File
+ * event.
+ * 
+ * @author isaiah van der elst
+ * 
+ * @param <A>
+ *            The attachment type
+ */
 public interface GearmanJoin<A> {
-	
+
 	/**
-	 * Returns the object attached to the job
-	 * @return
-	 * 		The attached object
+	 * Returns the object attached to the job. This value can be used to
+	 * identify a specific job with a the {@link GearmanJobEventCallback},
+	 * and/or it can be used to return values to the joining thead.
+	 * 
+	 * @return The attached object
 	 */
 	public A getAttachment();
-	
+
 	/**
-	 * Blocks the current thread until the job's eof has been reached and all events
-	 * have been processed
+	 * Blocks the current thread until the job's eof has been reached and all
+	 * events have been processed
+	 * 
 	 * @throws InterruptedException
-	 * 		if the thread is interrupted while blocked
+	 *             if the thread is interrupted while blocked
 	 */
 	public void join() throws InterruptedException;
-	
+
 	/**
-	 * Blocks the current thread until the job's eof has been reached and all events
-	 * have been processed or until the given timeout elapses
+	 * Blocks the current thread until the job's eof has been reached and all
+	 * events have been processed or until the given timeout elapses
+	 * 
 	 * @param timeout
-	 * 		The timeout duration
+	 *            The timeout duration
 	 * @param unit
-	 * 		The timeout unit
+	 *            The timeout unit
 	 * @throws InterruptedException
-	 * 		if the thread is interrupted while blocked
+	 *             if the thread is interrupted while blocked
 	 */
 	public void join(long timeout, TimeUnit unit) throws InterruptedException;
-	
+
 	/**
-	 * Returns <code>true</code> if the eof has been reached and all events have been
-	 * processed
-	 * @return
-	 * 		Returns <code>true</code> if the eof has been reached and all events have been
-	 * 		processed
+	 * Returns <code>true</code> if the eof has been reached and all events have
+	 * been processed
+	 * 
+	 * @return Returns <code>true</code> if the eof has been reached and all
+	 *         events have been processed
 	 */
 	public boolean isEOF();
 }

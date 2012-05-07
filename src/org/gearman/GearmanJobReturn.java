@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * The gearman job return is used to receive incoming job data from the job server.
- * @author isaiah
+ * @author Isaiah van der Elst
  */
 public interface GearmanJobReturn {
 	

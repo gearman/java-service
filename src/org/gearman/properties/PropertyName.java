@@ -27,6 +27,11 @@
 
 package org.gearman.properties;
 
+/**
+ * 
+ * @author isaiah
+ *
+ */
 public enum PropertyName {
 	/** The class name of the gearman implementation */
 	GEARMAN_CLASSNAME("gearman.classname", "org.gearman.impl.GearmanImpl"),
@@ -37,11 +42,17 @@ public enum PropertyName {
 	/** The amount of time a thread must be ideal before it can die */
 	GEARMAN_THREADTIMEOUT("gearman.ThreadTimeout", "30000"),
 	
+	/** The name of the logger user by the slf4j logging facade */
 	GEARMAN_LOGGER_NAME("gearman.LoggerName", "gearman"),
 	
+	/** Sets the default number of threads for the gearman worker */
 	GEARMAN_WORKER_THREADS("gearman.WorkerThreads", "1"),
 	
-	GEARMAN_JOB_HANDLE_PREFIX("gearman.JobHandlePrefix", "H");
+	/** Defines the job handle prefix. Job handles will have the format "Prefix:Username:Number" */
+	GEARMAN_JOB_HANDLE_PREFIX("gearman.JobHandlePrefix", "H"),
+	
+	/** The classname of a GearmanPersistance implementation used by the standalone server*/
+	GEARMAN_PERSISTANCE("gearman.PersistenceClassname", "");
 	
 	public final String name;
 	public final String defaultValue;
