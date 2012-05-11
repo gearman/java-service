@@ -86,6 +86,7 @@
 				<attribute name="Main-Class" value="org.gearman.impl.Main"/>
 				<attribute name="Project" value="${ant.project.name}"/>
 				<attribute name="Version" value="${project.version}"/>
+				<attribute name="Class-Path" value=". ./lib/slf4j-api-1.6.4.jar ./lib/slf4j-simple-1.6.4.jar"/>
 			</manifest>
 		</jar>
 	</target>

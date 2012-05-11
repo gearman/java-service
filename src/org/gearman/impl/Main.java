@@ -40,7 +40,7 @@ import org.gearman.properties.GearmanProperties;
  * The class that starts the standalone server
  * @author isaiah.v
  */
-class Main {
+public class Main {
 	
 	private static String HELP = 
 		GearmanConstants.PROJECT_NAME + " v" + GearmanConstants.VERSION + "\n" +
@@ -49,10 +49,10 @@ class Main {
 		"java [jvm options] -jar "+GearmanConstants.PROJECT_NAME+ "-" +GearmanConstants.VERSION+".jar [server options]\n" +
 		"\n" +
 		"Options:\n" +
-		"   -p PORT   --port=PORT     Defines what port number the server will listen on (Default: 4730)\n" +
-		"   -w        --writefile     Write the gearman.properties file to the current working directory and exit" +
-		"   -v        --version       Display the version of java gearman service and exit\n" +
-		"   -h        --help          Print this help menu and exit";
+		"   -p PORT   --port=PORT     port number to listen on (Default: 4730)\n" +
+		"   -w        --writefile     write out gearman.properties\n" +
+		"   -v        --version       display the version and exit\n" +
+		"   -h        --help          print help menu and exit";
 	
 	/**
 	 * Prints the current version and 
