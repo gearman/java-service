@@ -27,6 +27,8 @@
 
 package org.gearman.properties;
 
+import java.io.File;
+
 /**
  * 
  * @author isaiah
@@ -37,22 +39,25 @@ public enum PropertyName {
 	GEARMAN_CLASSNAME("gearman.classname", "org.gearman.impl.GearmanImpl"),
 	
 	/** The default gearman port number */
-	GEARMAN_PORT("gearman.Port", "4730"),
+	GEARMAN_PORT("gearman.port", "4730"),
 	
 	/** The amount of time a thread must be ideal before it can die */
-	GEARMAN_THREADTIMEOUT("gearman.ThreadTimeout", "30000"),
+	GEARMAN_THREADTIMEOUT("gearman.threadTimeout", "30000"),
 	
 	/** The name of the logger user by the slf4j logging facade */
-	GEARMAN_LOGGER_NAME("gearman.LoggerName", "gearman"),
+	GEARMAN_LOGGER_NAME("gearman.loggerName", "gearman"),
 	
 	/** Sets the default number of threads for the gearman worker */
-	GEARMAN_WORKER_THREADS("gearman.WorkerThreads", "1"),
+	GEARMAN_WORKER_THREADS("gearman.workerThreads", "1"),
 	
 	/** Defines the job handle prefix. Job handles will have the format "Prefix:Username:Number" */
-	GEARMAN_JOB_HANDLE_PREFIX("gearman.JobHandlePrefix", "H"),
+	GEARMAN_JOB_HANDLE_PREFIX("gearman.jobHandlePrefix", "H"),
 	
-	/** The classname of a GearmanPersistance implementation used by the standalone server*/
-	GEARMAN_PERSISTANCE("gearman.PersistenceClassname", "");
+	/** The classname of a GearmanPersistance implementation used by the standalone gearman job server*/
+	GEARMAN_PERSISTANCE("gearman.persistenceClassname", ""),
+	
+	/** An extended classpath used with the standalone gearman job server */ 
+	GEARMAN_CLASSPATH("gearman.classpath", "."+File.separatorChar+"lib"+File.separatorChar+"*"+File.pathSeparatorChar);
 	
 	public final String name;
 	public final String defaultValue;

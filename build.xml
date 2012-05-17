@@ -18,26 +18,34 @@
 
 <project name="java-gearman-service" default="zipbuild" basedir="." >
 	
+	<!-- Define the project version. The project version should be defind at build time -->
 	<fail message="'project.version' not defined" unless="project.version" />
 	
+	<!-- Define the excutable jar's runtime classpath -->
+	<property name="classpath" value=". ./lib/slf4j-api-1.6.4.jar ./lib/slf4j-simple-1.6.4.jar" />
+	
+	<!-- Define the project paths -->
+	<property name="project.src" location="./src" />
+	<property name="project.lib" location="./lib" />
+	
+	<!-- Define the build paths -->
 	<property name="build" location="./../builds/${ant.project.name}/${project.version}" />
 	<property name="build.src" location="${build}/src" />
 	<property name="build.bin" location="${build}/bin" />
 	<property name="build.javadoc" location="${build}/javadoc" />
 	
+	<!-- Define the full project name-->
 	<property name="fullname" value="${ant.project.name}-${project.version}" />
 	
-	<property name="javac.target" value="1.7" />
-	
-	<property name="project.src" location="./src" />
-	<property name="project.lib" location="./lib" />
+	<!-- Define the target enviornment -->
+	<property name="javac.target" value="1.7" />	
 	
 	
+	<!-- Define the build time classpath -->
 	<path id="jgs.classpath">
 		<pathelement location="${project.lib}/slf4j-api-1.6.4.jar" />
 	</path>
 
-	
 	<target depends="clean" name="init" >
 		<mkdir dir="${build.src}" />
 		<mkdir dir="${build.bin}" />
@@ -86,7 +94,6 @@
 				<attribute name="Main-Class" value="org.gearman.impl.Main"/>
 				<attribute name="Project" value="${ant.project.name}"/>
 				<attribute name="Version" value="${project.version}"/>
-				<attribute name="Class-Path" value=". ./lib/slf4j-api-1.6.4.jar ./lib/slf4j-simple-1.6.4.jar"/>
 			</manifest>
 		</jar>
 	</target>
