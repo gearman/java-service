@@ -30,7 +30,6 @@ package org.gearman.impl.server.local;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -57,7 +56,7 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 	private final Interpreter interpreter;
 	
 	private final Set<Client> clients = Collections.synchronizedSet(new HashSet<Client>());
-	private final Set<Integer> openPorts;
+	private final int openPort;
 	
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	
@@ -67,12 +66,13 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 	
 	private final Set<ServerShutdownListener> listeners = new HashSet<>();
 	
-	public GearmanServerLocal(GearmanImpl gearman, GearmanPersistence persistence, int...ports) throws IOException {
-		this(gearman, persistence, createID(ports), ports);
+	public GearmanServerLocal(GearmanImpl gearman, GearmanPersistence persistence, int port) throws IOException {
+		this(gearman, persistence, createID(port), port);
 	}
 	
-	public GearmanServerLocal(GearmanImpl gearman, GearmanPersistence persistence, String serverID, int...ports) throws IOException {
+	public GearmanServerLocal(GearmanImpl gearman, GearmanPersistence persistence, String serverID, int port) throws IOException {
 		this.gearman = gearman;
+		this.openPort = port;
 		
 		String host;
 		try {
@@ -84,30 +84,19 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 		this.hostName = host;
 		this.interpreter = new Interpreter(this, persistence);
 		
-		final Set<Integer> portSet = new HashSet<>(ports.length);
-		
-		for(int port : ports) {
-			try {
-				gearman.getGearmanConnectionManager().openPort(port, this);
-				portSet.add(port);
-			} catch (IOException ioe) {
-				GearmanConstants.LOGGER.error("failed to open port: " + port, ioe);
-				throw ioe;
-			}
+		try {
+			gearman.getGearmanConnectionManager().openPort(port, this);
+		} catch (IOException ioe) {
+			GearmanConstants.LOGGER.error("failed to open port: " + port, ioe);
+			throw ioe;
 		}
 		
-		this.openPorts = Collections.unmodifiableSet(portSet);
 		this.id = serverID;
 	}
 	
-	private static final String createID(int[] openPorts) {
+	private static final String createID(int openPort) {
 		final StringBuilder sb = new StringBuilder("local");
-		
-		for(Integer port : openPorts) {
-			sb.append(':');
-			sb.append(port);
-		}
-		
+		sb.append(openPort);		
 		return sb.toString();
 	}
 	
@@ -134,8 +123,7 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 			this.lock.writeLock().unlock();
 		}
 		
-		for(int port : this.openPorts)
-			this.gearman.getGearmanConnectionManager().closePort(port);
+		this.gearman.getGearmanConnectionManager().closePort(openPort);
 		
 		for(Client client : clients) {
 			client.close();
@@ -156,11 +144,6 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 	@Override
 	public GearmanImpl getGearman() {
 		return this.gearman;
-	}
-
-	@Override
-	public String getServerID() {
-		return this.id;
 	}
 	
 	@Override
@@ -296,8 +279,8 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 	}
 
 	@Override
-	public Collection<Integer> getPorts() {
-		return this.openPorts;
+	public int getPort() {
+		return this.openPort;
 	}
 
 	@Override
@@ -344,21 +327,35 @@ public class GearmanServerLocal implements GearmanServerInterface, GearmanConnec
 		conn.setAttachment(null);
 		if(client!=null) {
 			client.close();
-			this.clients.remove(conn.getAttachment());
+			this.clients.remove(client);
 		}
 	}
 
 	@Override
 	public void addShutdownListener(ServerShutdownListener listener) {
-		synchronized(this.listeners) {
-			this.listeners.add(listener);
+		try {
+			this.lock.readLock().lock();
+			if(this.isShutdown) throw new IllegalStateException("service is shutdown");
+		
+			synchronized(this.listeners) {
+				this.listeners.add(listener);
+			}
+		} finally {
+			this.lock.readLock().unlock();
 		}
 	}
 
 	@Override
 	public void removeShutdownListener(ServerShutdownListener listener) {
-		synchronized(this.listeners) {
-			this.listeners.remove(listener);
+		try {
+			this.lock.readLock().lock();
+			if(this.isShutdown) throw new IllegalStateException("service is shutdown");
+			
+			synchronized(this.listeners) {
+				this.listeners.remove(listener);
+			}
+		} finally {
+			this.lock.readLock().unlock();
 		}
 	}
 	

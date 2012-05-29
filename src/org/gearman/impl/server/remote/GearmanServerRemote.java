@@ -29,8 +29,6 @@ package org.gearman.impl.server.remote;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -133,11 +131,6 @@ public class GearmanServerRemote implements GearmanServerInterface {
 	public GearmanImpl getGearman() {
 		return this.gearman;
 	}
-
-	@Override
-	public String getServerID() {
-		return this.id;
-	}
 	
 	@Override
 	public String toString() {
@@ -230,8 +223,8 @@ public class GearmanServerRemote implements GearmanServerInterface {
 	}
 
 	@Override
-	public Collection<Integer> getPorts() {
-		return Collections.singleton(adrs.getPort());
+	public int getPort() {
+		return adrs.getPort();
 	}
 
 	@Override

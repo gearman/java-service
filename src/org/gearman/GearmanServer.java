@@ -27,8 +27,6 @@
 
 package org.gearman;
 
-import java.util.Collection;
-
 /**
  * The gearman job server receives jobs from the client and distributes them to available workers
  * @author isaiah
@@ -47,7 +45,7 @@ public interface GearmanServer extends GearmanService {
 	 * @return
 	 * 		The port number the server is listening on
 	 */
-	public Collection<Integer> getPorts();
+	public int getPort();
 	
 	/**
 	 * Returns the host name for this server instance.
@@ -55,11 +53,4 @@ public interface GearmanServer extends GearmanService {
 	 * 		The host name for this server instance
 	 */
 	public String getHostName();
-	
-	/**
-	 * The server ID
-	 * @return
-	 * 		The server ID
-	 */
-	public String getServerID();
 }
