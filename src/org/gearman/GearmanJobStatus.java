@@ -28,7 +28,7 @@
 package org.gearman;
 
 /**
- * An immutable object specifying a job's status at a 
+ * An immutable object specifying a job's status 
  * @author isaiah
  */
 public interface GearmanJobStatus {

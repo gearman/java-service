@@ -30,7 +30,7 @@ package org.gearman;
 import java.io.Serializable;
 
 /**
- * Defines why a method is being called
+ * Specifies why a connection was lost
  * @author isaiah
  */
 public enum GearmanLostConnectionGrounds implements Serializable {
