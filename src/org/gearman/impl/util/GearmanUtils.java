@@ -49,6 +49,8 @@ public class GearmanUtils {
 	}
 	
 	public static final String toString(GearmanConnection<?> conn) {
+		if(conn==null)
+			System.out.println("error");
 		return "["+conn.getHostAddress() + ":" + conn.getPort() +"]";
 	}
 	

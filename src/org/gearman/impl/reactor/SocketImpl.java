@@ -218,7 +218,6 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 		if(exc instanceof IOException) {
 			this.writters.clear();
 			this.close();
-			this.setAttachment(null);
 			return;
 		}
 		
