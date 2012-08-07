@@ -1,4 +1,4 @@
-package org.gearman.impl.util;
+package org.gearman.impl.worker;
 
 /**
  * A funky mechonizom that executes a task when there are zero threads in the critcal
@@ -10,12 +10,16 @@ package org.gearman.impl.util;
  * 
  * @author isaiah van der elst
  */
-public class ZeroLock {
+class ZeroLock {
 	private int count = 0;
 	private final Runnable task;
 	
 	public ZeroLock(Runnable task) {
 		this.task = task;
+	}
+	
+	public synchronized void reset() {
+		count=0;
 	}
 	
 	public synchronized void lock() {

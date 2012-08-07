@@ -42,7 +42,6 @@ import org.gearman.impl.serverpool.AbstractConnectionController;
 import org.gearman.impl.serverpool.ControllerState;
 import org.gearman.impl.serverpool.AbstractJobServerPool;
 import org.gearman.impl.util.GearmanUtils;
-import org.gearman.impl.util.ZeroLock;
 
 abstract class WorkerConnectionController extends AbstractConnectionController {
 	
@@ -80,6 +79,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	@Override
 	public synchronized void onClose(ControllerState oldState) {
 		this.isQueued = false;
+		this.zeroLock.reset();
 		this.getDispatcher().drop(this);
 	}
 	
