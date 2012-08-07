@@ -79,7 +79,6 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	@Override
 	public synchronized void onClose(ControllerState oldState) {
 		this.isQueued = false;
-		this.zeroLock.reset();
 		this.getDispatcher().drop(this);
 	}
 	
@@ -282,6 +281,12 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 		if(time-this.grabTimeout>GRAB_TIMEOUT) {
 			// If the server fails to send back a response to the GRAB_JOB packet,
 			// we log the error and close the connection without re-queuing
+			
+			
+			// If a timeout occurs, we need to rlease the zero lock accured when
+			// the GRAB_JOB packet was sent
+			assert zeroLock.isLocked();
+			zeroLock.unlock();
 			
 			super.timeout();
 		} else if(time-this.noopTimeout>NOOP_TIMEOUT) {

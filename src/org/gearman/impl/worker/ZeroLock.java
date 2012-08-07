@@ -26,6 +26,10 @@ class ZeroLock {
 		count++;
 	}
 	
+	public boolean isLocked() {
+		return count>0;
+	}
+	
 	public synchronized void unlock() {
 		count--;
 		assert count>=0;
