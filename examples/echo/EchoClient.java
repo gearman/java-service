@@ -79,7 +79,7 @@ public class EchoClient {
 			case GEARMAN_JOB_FAIL: // The job's execution failed
 				System.err.println(event.getEventType() + ": "
 						+ new String(event.getData()));
-
+			default:
 			}
 
 		}

@@ -95,6 +95,7 @@ public class EchoClientAsynchronous implements GearmanJobEventCallback<String> {
 		case GEARMAN_JOB_FAIL: // The job's execution failed
 			System.err.println(event.getEventType() + ": "
 					+ new String(event.getData()));
+		default:
 		}
 
 	}

@@ -250,6 +250,7 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 				}
 				
 				break;
+			case CLOSE_PENDING:
 			case OPEN:
 				assert this.open.contains(icc);
 				assert !this.available.contains(icc);
@@ -265,6 +266,8 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 			case DROPPED:
 				assert false;
 				break;
+			default:
+				throw new IllegalStateException("unknown controller state");
 			}
 		}
 	}

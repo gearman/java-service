@@ -143,6 +143,7 @@ public class Main {
 		 * Must specify a 'null' parent, otherwise the system's classloader will be the
 		 * parent. 
 		 */
+		@SuppressWarnings("resource")
 		ClassLoader classLoader = new URLClassLoader(urls, null);
 		
 		// Load the gearman implementation class

@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.gearman.GearmanFunction;
 import org.gearman.GearmanLostConnectionAction;
@@ -117,6 +118,7 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 
 		@Override
 		public void onConnect(ControllerState oldState) {
+			connections.incrementAndGet();
 			super.getKey().createGearmanConnection(this, this);
 		}
 
@@ -167,10 +169,14 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 		}
 
 		@Override
-		public void onClose(ControllerState oldState) { }
+		public void onClose(ControllerState oldState) {
+			connections.decrementAndGet();
+			super.onClose(oldState);
+		}
 
 		@Override
 		public void onWait(ControllerState oldState) { }
+
 	}
 	
 	private final class FunctionInfo {
@@ -189,7 +195,13 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 	private final Heartbeat heartbeat = new Heartbeat();
 	private ScheduledFuture<?> future;
 	
-	private boolean isConnected = false;
+	private AtomicInteger connections = new AtomicInteger(0);
+	
+	private boolean isConnected() {
+		return connections.get()>0;
+	}
+	
+	
 	
 	public GearmanWorkerImpl(final GearmanImpl gearman) {
 		super(gearman, new GearmanLostConnectionPolicyImpl(), 60, TimeUnit.SECONDS);
@@ -216,11 +228,15 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 			final FunctionInfo oldFunc = this.funcMap.put(name, newFunc);
 			
 			if(oldFunc!=null) return oldFunc.function;
-			if(this.isConnected) return null;
+			if(this.isConnected()) {
+				for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values())
+					cc.canDo(name);
+				
+				if(this.future==null)this.future = super.getGearman().getScheduler().scheduleAtFixedRate(this.heartbeat, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD, TimeUnit.NANOSECONDS);
+				return null;
+			}
 			
-			this.isConnected = true;
-			
-			this.future = super.getGearman().getScheduler().scheduleAtFixedRate(this.heartbeat, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD, TimeUnit.NANOSECONDS);
+			if(this.future==null)this.future = super.getGearman().getScheduler().scheduleAtFixedRate(this.heartbeat, HEARTBEAT_PERIOD, HEARTBEAT_PERIOD, TimeUnit.NANOSECONDS);
 			
 			for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values()) {
 				cc.openServer(false);
@@ -261,11 +277,14 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 			if(info==null) return false;
 			
 			if(this.funcMap.isEmpty()) {
-				this.isConnected = false;
-				if(this.future!=null) future.cancel(false);
+				if(this.future!=null) {
+					future.cancel(false);
+					future=null;
+				}
 				
 				for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values()) {
-					cc.closeServer();
+					cc.cantDo(functionName);
+					cc.closeIfNotWorking();
 				}
 			} else {
 				for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values()) {
@@ -285,7 +304,10 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 	public void removeAllServers() {
 		
 		synchronized(this.funcMap) {
-			if(this.future!=null) future.cancel(false);
+			if(this.future!=null) {
+				future.cancel(false);
+				future = null;
+			}
 		}
 		
 		super.removeAllServers();
@@ -301,7 +323,26 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 	public void removeAllFunctions() {
 		synchronized(this.funcMap) {
 			this.funcMap.clear();
-			if(this.future!=null) future.cancel(false);
+			if(this.future!=null) {
+				future.cancel(false);
+				future = null;
+			}
+			
+			if(this.funcMap.isEmpty()) {
+				if(this.future!=null) {
+					future.cancel(false);
+					future=null;
+				}
+				
+				for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values()) {
+					cc.resetAbilities();
+					cc.closeIfNotWorking();
+				}
+			} else {
+				for(WorkerConnectionController cc : GearmanWorkerImpl.super.getConnections().values()) {
+					cc.resetAbilities();
+				}
+			}
 		}
 	}
 	

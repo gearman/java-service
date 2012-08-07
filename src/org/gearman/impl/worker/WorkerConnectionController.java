@@ -42,11 +42,20 @@ import org.gearman.impl.serverpool.AbstractConnectionController;
 import org.gearman.impl.serverpool.ControllerState;
 import org.gearman.impl.serverpool.AbstractJobServerPool;
 import org.gearman.impl.util.GearmanUtils;
+import org.gearman.impl.util.ZeroLock;
 
 abstract class WorkerConnectionController extends AbstractConnectionController {
-
+	
 	private static final int NOOP_TIMEOUT = 59000;
 	private static final int GRAB_TIMEOUT = 19000;
+	
+	private final ZeroLock zeroLock = new ZeroLock(new Runnable(){
+		@Override
+		public void run() {
+			if(WorkerConnectionController.this.getWorker().getRegisteredFunctions().isEmpty())
+				WorkerConnectionController.this.closeServer();
+		}
+	});
 	
 	/** Specifies if this ConnectionController is in the Dispatcher's queue */
 	private boolean isQueued = false;
@@ -63,6 +72,16 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	 * be Long.MAX_VALUE
 	 */
 	private long grabTimeout = Long.MAX_VALUE;
+	
+	public void closeIfNotWorking() {
+		zeroLock.runIfNotLocked();
+	}
+	
+	@Override
+	public synchronized void onClose(ControllerState oldState) {
+		this.isQueued = false;
+		this.getDispatcher().drop(this);
+	}
 	
 	WorkerConnectionController(AbstractJobServerPool<WorkerConnectionController> sc, GearmanServerInterface key) {
 		super(sc, key);
@@ -103,6 +122,8 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	 * This method should only be called by the Dispatcher
 	 */
 	public final void grabJob() {
+		zeroLock.lock();
+		
 		if(!super.isConnected()) return;
 
 		// When this method is called, this object is no longer in the
@@ -119,13 +140,16 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 				final boolean b = WorkerConnectionController.this.sendPacket(GearmanPacket.createGRAB_JOB(), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
 					@Override
 					public void onComplete(GearmanPacket data, SendCallbackResult result) {
-						if(!result.isSuccessful())
+						if(!result.isSuccessful()) {
+							zeroLock.unlock();
 							WorkerConnectionController.this.getDispatcher().done();
+						}
 					}
 					
 				});
 				
 				if(!b) {
+					zeroLock.unlock();
 					WorkerConnectionController.this.getDispatcher().done();
 				}
 			}
@@ -136,11 +160,13 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 		this.grabTimeout = Long.MAX_VALUE;
 		this.toDispatcher();
 		
+		
 		this.getWorker().getGearman().getScheduler().execute(new Runnable() {
 
 			@Override
 			public void run() {
 				try {
+					
 					final byte[] jobHandle = packet.getArgumentData(0);
 					final String name = new String(packet.getArgumentData(1),GearmanConstants.CHARSET);
 					final byte[] jobData = packet.getArgumentData(2);
@@ -173,7 +199,8 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 						callback.fail();
 					}
 					
-				} finally {
+				} finally {					
+					zeroLock.unlock();
 					getDispatcher().done();
 				}
 			}
@@ -206,7 +233,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 
 	
 	@Override
-	public void onOpen(ControllerState oldState) {
+	public synchronized void onOpen(ControllerState oldState) {
 		final Set<String> funcSet = this.getWorker().getRegisteredFunctions();
 		this.canDo(funcSet);
 	}
@@ -257,7 +284,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 			// we log the error and close the connection without re-queuing
 			
 			super.timeout();
-		} else if(time-this.noopTimeout>NOOP_TIMEOUT){
+		} else if(time-this.noopTimeout>NOOP_TIMEOUT) {
 			this.noop();
 		}
 	}

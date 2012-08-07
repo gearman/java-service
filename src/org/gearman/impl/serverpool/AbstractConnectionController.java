@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.gearman.GearmanJobStatus;
 import org.gearman.GearmanLostConnectionGrounds;
@@ -57,11 +58,17 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	private ScheduledFuture<?> future;
 	private Closer closer;
 	
+	private AtomicInteger connId = new AtomicInteger(0);
+	
 	private final SendCallback defaultCallback;
 	
 	private HashMap<ByteArray, TaskJoin<GearmanJobStatus>> pendingJobStatus; 
 	
 	private final Object lock = new Object();
+	
+	public int getConnectionId() {
+		return connId.get();
+	}
 	
 	protected AbstractConnectionController(AbstractJobServerPool<?> sc, GearmanServerInterface key) {
 		this.key = key;
@@ -138,6 +145,8 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				
 				this.state = ControllerState.OPEN;
 				this.conn = conn;
+				
+				this.connId.incrementAndGet();
 				this.onOpen(oldState);
 				
 				if(!this.sc.getClientID().equals(AbstractJobServerPool.DEFAULT_CLIENT_ID)) {
@@ -262,6 +271,14 @@ public abstract class AbstractConnectionController implements ConnectionControll
 		return true;
 	}
 	
+	public boolean sendPacket(GearmanPacket packet, GearmanCallbackHandler<GearmanPacket, SendCallbackResult> callback, int connectionId) {
+		if(connId.get()==connectionId) {
+			return sendPacket(packet, callback);
+		} else {
+			return false;
+		}
+	}
+	
 	/**
 	 * Attempts to connect to a job server iff the current state allows it.<br>
 	 * <br>
@@ -340,7 +357,10 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				this.closeServer();
 				break;
 			case CLOSED:
+			case CLOSE_PENDING:
 				break;
+			default:
+				throw new IllegalStateException("unknown controller state:" + this.state);
 			}
 			
 			this.state = ControllerState.WAITING;
@@ -373,7 +393,7 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	}
 
 
-	public final void closeServer() {
+	public void closeServer() {
 		synchronized(this.lock) {
 			ControllerState oldState = this.state;
 			this.state = ControllerState.CLOSED;

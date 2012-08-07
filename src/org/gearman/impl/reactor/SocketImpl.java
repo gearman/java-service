@@ -75,8 +75,10 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 			this.isClosed = true;
 		}
 		
-		if(this.writters.isEmpty())
-			this.closeConnection();
+		synchronized(this.writters) {
+			if(!this.isWriting)
+				this.closeConnection();
+		}
 	}
 
 	@Override
@@ -227,7 +229,10 @@ final class SocketImpl<A> implements Socket<A>, CompletionHandler<Integer, Objec
 	}
 	
 	private final void closeConnection() {
+		if(!this.socketChannel.isOpen()) return;
 		try {
+			this.socketChannel.shutdownOutput();
+			this.socketChannel.shutdownInput();
 			this.socketChannel.close();
 		} catch (IOException ioe) {
 			GearmanConstants.LOGGER.warn("Failed to close connection", ioe);
