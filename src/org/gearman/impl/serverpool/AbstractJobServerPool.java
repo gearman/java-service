@@ -120,7 +120,13 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 
 	@Override
 	public boolean removeServer(GearmanServer srvr) {
-		return this.connMap.remove(srvr)!=null;
+		X x = this.connMap.remove(srvr);
+		if(x!=null) {
+			x.dropServer();
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	@Override
