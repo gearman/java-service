@@ -27,6 +27,8 @@
 
 package org.gearman.impl.worker;
 
+import java.util.Arrays;
+
 import org.gearman.GearmanFunctionCallback;
 import org.gearman.impl.core.GearmanPacket;
 import org.gearman.impl.core.GearmanPacket.Magic;
@@ -77,6 +79,16 @@ class GearmanFunctionCallbackImpl implements GearmanFunctionCallback {
 	
 	private boolean isComplete() {
 		return isComplete;
+	}
+
+	@Override
+	public byte[] getJobHandle() {
+		return Arrays.copyOf(jobHandle, jobHandle.length);
+	}
+
+	@Override
+	public boolean isAlive() {
+		return (wcc.isOpen())&&(wcc.getConnectionId()==connectionID)&&(!isComplete);
 	}
 
 }

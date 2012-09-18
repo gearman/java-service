@@ -93,4 +93,23 @@ public interface GearmanFunctionCallback {
 	 * 		completed
 	 */
 	public abstract void sendStatus(long numerator, long denominator);
+	
+	/**
+	 * Returns the job handle for the job currently being executed.
+	 * @return
+	 * 		The job handle
+	 */
+	public byte[] getJobHandle();
+	
+	/**
+	 * Indicated if the job is still alive. If the job is not alive, information will not be sent
+	 * back to the server. This includes returning the result and calls to {@link #sendData(byte[])}, {@link #sendWarning(byte[])}, and {@link #sendStatus(long, long)}.<br>
+	 * <br>
+	 * A job will die if one of the following events occur:<br>
+	 *   1) The job has already been completed.<br>
+	 *   2) The worker disconnected from the server while working on the job.<br> 
+	 * @return
+	 * 		<code>true</code> is the job is alive.
+	 */
+	public abstract boolean isAlive();
 }

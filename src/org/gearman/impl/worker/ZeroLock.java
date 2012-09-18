@@ -1,10 +1,10 @@
 package org.gearman.impl.worker;
 
 /**
- * A funky mechonizom that executes a task when there are zero threads in the critcal
- * code block. Where this is used, the critcal code block is not a single block of
+ * A funky mechanism that executes a task when there are zero threads in the critical
+ * code block. Where this is used, the critical code block is not a single block of
  * code. The the thread that calls "lock" may not be the same thread that calls "unlock,"
- * so we need to be abosulty sure there are equal number of "lock" calls as "unlock"
+ * so we need to be absolute sure there are equal number of "lock" calls as "unlock"
  * calls.
  * 
  * 

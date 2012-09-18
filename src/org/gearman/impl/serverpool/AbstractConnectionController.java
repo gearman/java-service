@@ -199,11 +199,10 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				this.pendingJobStatus.clear();
 				this.pendingJobStatus = null;
 			}
-			
 			// If we disconnect from the OPEN state, then we have unexpectedly disconnected
 			this.closeServer();
-			this.onLostConnection(sc.getPolicy(), GearmanLostConnectionGrounds.UNEXPECTED_DISCONNECT);
 		}
+		this.onLostConnection(sc.getPolicy(), GearmanLostConnectionGrounds.UNEXPECTED_DISCONNECT);
 	}
 	
 	@Override
@@ -340,11 +339,12 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	 * 		The time unit for the waiting period
 	 */
 	public final void waitServer(final Runnable callback, long waittime, final TimeUnit unit) {
+		final ControllerState oldState;
 		synchronized(this.lock) {
 			if(this.closer==null) this.closer = new Closer();
 			this.closer.setCallback(callback);
 			
-			final ControllerState oldState = this.state;
+			oldState = this.state;
 			switch(this.state) {
 			case DROPPED:
 				return;
@@ -365,8 +365,8 @@ public abstract class AbstractConnectionController implements ConnectionControll
 			
 			this.state = ControllerState.WAITING;
 			sc.getGearman().getScheduler().schedule(this.closer, waittime, unit);
-			this.onWait(oldState);
 		}
+		this.onWait(oldState);
 	}
 
 
@@ -394,8 +394,9 @@ public abstract class AbstractConnectionController implements ConnectionControll
 
 
 	public void closeServer() {
+		ControllerState oldState = this.state;
 		synchronized(this.lock) {
-			ControllerState oldState = this.state;
+			oldState = this.state;
 			this.state = ControllerState.CLOSED;
 			
 			switch(oldState) {
@@ -430,43 +431,14 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				assert false;
 				return;
 			}
-			
-			this.onClose(oldState);
 		}
+		this.onClose(oldState);
 	}
-
-
-	public final void softDrop() {
-		synchronized(this.lock) {
-			final ControllerState oldState = this.state;
-			if(this.state.equals(ControllerState.DROPPED)) return;
-			
-			this.state = ControllerState.DROPPED;
-			
-			if(this.conn!=null) {
-				try {
-					conn.close();
-				} catch (IOException e) {
-					GearmanConstants.LOGGER.warn("failed to close connection", e);
-				}
-			}
-			
-			if(this.pendingJobStatus!=null) {
-				for(Entry<ByteArray, TaskJoin<GearmanJobStatus>> entry : this.pendingJobStatus.entrySet()) {
-					// Server Dropped
-					entry.getValue().setValue(GearmanJobStatusImpl.NOT_KNOWN);
-				}
-				
-				this.pendingJobStatus.clear();
-				this.pendingJobStatus = null;
-			}
-			
-			this.onDrop(oldState);
-		}
-	}
+	
 	public final void dropServer() {
+		final ControllerState oldState;
 		synchronized(this.lock) {
-			final ControllerState oldState = this.state;
+			oldState = this.state;
 			if(this.state.equals(ControllerState.DROPPED)) return;
 			
 			this.state = ControllerState.DROPPED;
@@ -489,9 +461,8 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				this.pendingJobStatus.clear();
 				this.pendingJobStatus = null;
 			}
-			
-			this.onDrop(oldState);
 		}
+		this.onDrop(oldState);
 	}
 	
 	public final TaskJoin<GearmanJobStatus> getStatus(final ByteArray jobHandle) {
