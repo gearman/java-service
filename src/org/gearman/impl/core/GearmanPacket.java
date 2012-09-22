@@ -227,7 +227,7 @@ public final class GearmanPacket {
     	return this.type;
     }
     
-    final void setPacketType(final Type type) {
+    public final void setPacketType(final Type type) {
     	this.type = type;
     }
     

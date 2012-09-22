@@ -47,6 +47,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	
 	private static final int NOOP_TIMEOUT = 59000;
 	private static final int GRAB_TIMEOUT = 19000;
+	private static final int PING_TIMEOUT = 59000;
 	
 	private final ZeroLock zeroLock = new ZeroLock(new Runnable(){
 		@Override
@@ -64,6 +65,12 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 	 * this value should be Long.MAX_VALUE
 	 */
 	private long noopTimeout = Long.MAX_VALUE;
+	
+	/**
+	 * While working on long executing jobs, the worker needs to ping the server
+	 * to keep it alive.
+	 */
+	private long pingTimeout = Long.MAX_VALUE;
 	
 	/**
 	 * The time that the last GRAB_JOB packet was sent. If this connection
@@ -211,6 +218,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 		// Received a response. Set the 
 		this.grabTimeout = Long.MAX_VALUE;
 		this.noopTimeout = System.currentTimeMillis();
+		this.pingTimeout = Long.MAX_VALUE;
 		
 		this.getDispatcher().done();
 		sendPacket(GearmanPacket.createPRE_SLEEP(), null);
@@ -227,6 +235,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 		// A noop packet has come in. This implies that the connection has
 		// moved from the sleeping state to a state that is ready to work.
 		this.noopTimeout=Long.MAX_VALUE;
+		this.pingTimeout = System.currentTimeMillis();
 		this.toDispatcher();
 	}
 
@@ -257,7 +266,7 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 			super.onStatusReceived(packet);
 			break;
 		case ECHO_RES:
-			// not implemented
+			// nothing to do
 			return;
 		case ERROR:
 			error(packet);
@@ -291,6 +300,8 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 			super.timeout();
 		} else if(time-this.noopTimeout>NOOP_TIMEOUT) {
 			this.noop();
+		} else if(time-this.pingTimeout>PING_TIMEOUT) {
+			super.ping();
 		}
 	}
 	

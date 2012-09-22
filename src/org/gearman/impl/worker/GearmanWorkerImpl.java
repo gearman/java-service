@@ -176,7 +176,6 @@ public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionCon
 
 		@Override
 		public void onWait(ControllerState oldState) { }
-
 	}
 	
 	private final class FunctionInfo {

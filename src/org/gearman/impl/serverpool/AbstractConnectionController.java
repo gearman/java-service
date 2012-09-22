@@ -99,6 +99,10 @@ public abstract class AbstractConnectionController implements ConnectionControll
 		this.completeJobStatus(jobHandle, isKnown, isRunning, numerator, denominator);
 	}
 	
+	public final void ping() {
+		conn.sendPacket(GearmanPacket.createECHO_REQ("ping".getBytes(GearmanConstants.CHARSET)), null /*TODO*/);
+	}
+	
 	@Override
 	public ControllerState getControllerState() {
 		return this.state;

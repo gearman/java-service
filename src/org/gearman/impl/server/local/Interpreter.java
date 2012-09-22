@@ -369,6 +369,7 @@ final class Interpreter {
 		 */
 		
 		packet.setMagic(Magic.RES);
+		packet.setPacketType(GearmanPacket.Type.ECHO_RES);
 		client.sendPacket(packet, null);
 	}
 	
