@@ -27,11 +27,11 @@
 
 package org.gearman.impl.server.local;
 
-import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.gearman.GearmanJobPriority;
 import org.gearman.impl.GearmanConstants;
@@ -314,7 +314,7 @@ abstract class JobAbstract implements Job, ClientDisconnectListener {
 	/** The prefix for the job handle */
 	private static final byte[] jobHandlePrefix = initJobHandle();
 	/** The current job handle number */
-	private static long jobHandleNumber = 1;
+	private static AtomicLong jobHandleNumber = new AtomicLong(0);
 	
 	/**
 	 * Initializes the jobHandlePrefix variable
@@ -325,10 +325,9 @@ abstract class JobAbstract implements Job, ClientDisconnectListener {
 		String user;
 		try {
 			user = java.net.InetAddress.getLocalHost().getHostName();
-			//user = System.getProperty("user.name").getBytes("UTF-8");
-		} catch (UnknownHostException e) {
-			assert false;
-			return null;
+		} catch (Throwable e) {
+			String prefixStr = GearmanProperties.getProperty(PropertyName.GEARMAN_JOB_HANDLE_PREFIX);
+			return (prefixStr + ":gearman:").getBytes(GearmanConstants.CHARSET);
 		}
 		
 		String prefixStr = GearmanProperties.getProperty(PropertyName.GEARMAN_JOB_HANDLE_PREFIX);
@@ -341,14 +340,12 @@ abstract class JobAbstract implements Job, ClientDisconnectListener {
 	 * @return
 	 * 		the next available job handle
 	 */
-	private synchronized static final byte[] getNextJobHandle() {
-		final byte[] jobNumber = Long.toString(jobHandleNumber).getBytes(GearmanConstants.CHARSET);
+	private static final byte[] getNextJobHandle() {
+		final byte[] jobNumber = Long.toString(jobHandleNumber.incrementAndGet()).getBytes(GearmanConstants.CHARSET);
 		
 		final byte[] jobHandle = new byte[jobHandlePrefix.length+jobNumber.length];
 		System.arraycopy(jobHandlePrefix, 0, jobHandle, 0, jobHandlePrefix.length);
 		System.arraycopy(jobNumber, 0, jobHandle, jobHandlePrefix.length, jobNumber.length);
-		
-		jobHandleNumber++;
 		
 		return jobHandle;
 	}

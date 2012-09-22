@@ -40,6 +40,7 @@ import org.gearman.impl.core.GearmanPacket;
 import org.gearman.impl.server.GearmanServerInterface;
 import org.gearman.impl.serverpool.AbstractConnectionController;
 import org.gearman.impl.serverpool.AbstractJobServerPool;
+import org.gearman.impl.serverpool.ControllerState;
 import org.gearman.impl.util.ByteArray;
 import org.gearman.impl.util.GearmanUtils;
 
@@ -61,6 +62,13 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 	
 	protected ClientConnectionController(AbstractJobServerPool<?> sc, GearmanServerInterface key) {
 		super(sc, key);
+	}
+	
+	@Override
+	public void onClose(ControllerState oldState) {
+		for(BackendJobReturn bjr : jobs.values()) {
+			bjr.eof(GearmanJobEventImmutable.GEARMAN_JOB_DISCONNECT);
+		}
 	}
 	
 	public final void timeoutCheck(long time) {

@@ -138,6 +138,7 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 		@Override
 		public void onClose(ControllerState oldState) {
 			super.close();
+			super.onClose(oldState);
 			if(oldState.equals(ControllerState.OPEN))
 				ClientImpl.this.onClose(this);
 		}
