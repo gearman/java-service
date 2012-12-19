@@ -34,16 +34,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.gearman.GearmanLostConnectionPolicy;
 import org.gearman.GearmanServer;
+import org.gearman.impl.GearmanConstants;
 import org.gearman.impl.GearmanImpl;
+import org.gearman.impl.core.GearmanCallbackHandler;
 import org.gearman.impl.core.GearmanPacket;
+import org.gearman.impl.core.GearmanConnection.SendCallbackResult;
 import org.gearman.impl.server.GearmanServerInterface;
 import org.gearman.impl.server.ServerShutdownListener;
 
 /**
- * A nasty class used to manage multa
+ * A class used to manage multiple job server connections
  * 
  * @author isaiah
  */
@@ -59,6 +64,8 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 	private boolean isShutdown = false;
 	private String id = AbstractJobServerPool.DEFAULT_CLIENT_ID;
 	
+	private final ReadWriteLock closeLock = new ReentrantReadWriteLock();
+	
 	protected AbstractJobServerPool(GearmanImpl gearman, GearmanLostConnectionPolicy defaultPolicy, long waitPeriod, TimeUnit unit) {
 		this.defaultPolicy = defaultPolicy;
 		this.policy = defaultPolicy;
@@ -72,16 +79,21 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 			throw new IllegalArgumentException("Unsupported GearmanServer Implementation: " + srvr.getClass().getCanonicalName());
 		
 		GearmanServerInterface key = (GearmanServerInterface)srvr;
-		
-		if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
-		
-		X x = this.createController(key);
-		
-		if(this.connMap.putIfAbsent(key, x)==null) {
-			x.onNew();
-			return true;
-		} else {
-			return false;
+		try {
+			closeLock.readLock().lock();
+			
+			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			
+			X x = this.createController(key);
+			
+			if(this.connMap.putIfAbsent(key, x)==null) {
+				x.onNew();
+				return true;
+			} else {
+				return false;
+			}
+		} finally {
+			closeLock.readLock().unlock();
 		}
 	}
 	
@@ -120,39 +132,75 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 
 	@Override
 	public boolean removeServer(GearmanServer srvr) {
-		X x = this.connMap.remove(srvr);
-		if(x!=null) {
-			x.dropServer();
-			return true;
-		} else {
-			return false;
+		try {
+			closeLock.readLock().lock();
+			
+			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			
+			X x = this.connMap.remove(srvr);
+			if(x!=null) {
+				x.dropServer();
+				return true;
+			} else {
+				return false;
+			}
+		} finally {
+			closeLock.readLock().unlock();
 		}
 	}
 
 	@Override
-	public void setClientID(String id) {
-		if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
-		if(this.id.equals(id)) return;
-		
-		for(X x : this.connMap.values()) {
-			x.sendPacket(GearmanPacket.createSET_CLIENT_ID(id), null /** TODO */);
+	public void setClientID(final String id) {
+		try {
+			closeLock.readLock().lock();
+			
+			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			if(this.id.equals(id)) return;
+			
+			this.id = id;
+			
+			for(final Map.Entry<GearmanServerInterface, X> entry : this.connMap.entrySet()) {
+				entry.getValue().sendPacket(GearmanPacket.createSET_CLIENT_ID(id), new GearmanCallbackHandler<GearmanPacket, SendCallbackResult>() {
+					@Override
+					public void onComplete(GearmanPacket data, SendCallbackResult result) {
+						if(result.isSuccessful()) return;
+						
+						GearmanServerInterface gsi = entry.getKey();
+						GearmanConstants.LOGGER.warn("failed to set client id: " + gsi.getHostName() + ":" + gsi.getPort());
+					}
+				});
+			}
+		} finally {
+			closeLock.readLock().unlock();
 		}
 	}
 
 	@Override
 	public void setLostConnectionPolicy(GearmanLostConnectionPolicy policy) {
-		if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
-		
-		if(this.policy==null)
-			this.policy = this.defaultPolicy;
-		else
-			this.policy = policy;
+		try {
+			closeLock.readLock().lock();
+			
+			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			
+			if(this.policy==null)
+				this.policy = this.defaultPolicy;
+			else
+				this.policy = policy;
+		} finally {
+			closeLock.readLock().unlock();
+		}
 	}
 
 	@Override
 	public void setReconnectPeriod(long time, TimeUnit unit) {
-		if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
-		this.waitPeriod = unit.toNanos(time);
+		try {
+			closeLock.readLock().lock();
+			
+			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			this.waitPeriod = unit.toNanos(time);
+		} finally {
+			closeLock.readLock().unlock();
+		}
 	}
 
 	@Override
@@ -162,10 +210,15 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 
 	@Override
 	public synchronized void shutdown() {
-		if(this.isShutdown) return;
-		this.isShutdown = true;
-		
-		this.removeAllServers();
+		try {
+			closeLock.writeLock().lock();
+			
+			if(this.isShutdown) return;
+			this.removeAllServers();
+			this.isShutdown = true;
+		} finally {
+			closeLock.writeLock().unlock();
+		}
 	}
 	
 	protected Map<GearmanServerInterface, X> getConnections() {
@@ -188,6 +241,8 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 	
 	@Override
 	public void onShutdown(GearmanServerInterface server) {
+		// from the shutdown listener interface
+		
 		this.removeServer(server);
 		this.policy.shutdownServer(server);
 	}
