@@ -1,0 +1,135 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    
+    <name>java-gearman-service</name>
+    <url>http://code.google.com/p/java-gearman-service/</url>
+    <description>
+    	Gearman provides a generic application framework to farm out work to other 
+    	machines or processes that are better suited to do the work. It allows you 
+    	to do work in parallel, to load balance processing, and to call functions 
+    	between languages. It can be used in a variety of applications, from high-
+    	availability web sites to the transport of database replication events. In 
+    	other words, it is the nervous system for how distributed processing 
+    	communicates.
+    </description>
+    <inceptionYear>2010</inceptionYear>
+    <organization>
+		<name>gearman</name>
+		<url>http://www.gearman.org</url>
+	</organization>
+    
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>java-gearman-service</groupId>
+	<artifactId>jgs</artifactId>
+	<version>0.6.6-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	
+	<properties>
+	    <slf4j.version>[1.6,2.0)</slf4j.version>
+	    <junit.version>[4.0,5.0)</junit.version>
+	    
+	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+	
+	<build>
+	    <resources>
+	        <resource>
+	        	<directory>src/main/resources</directory>
+	        	<filtering>true</filtering>
+      		</resource>
+	    </resources>
+	    
+		<plugins>
+		    
+		    <!-- Compile -->
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.0</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+			
+			<plugin>
+        		<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-jar-plugin</artifactId>
+        		<version>2.3.1</version>
+      		</plugin>
+		    
+		    <!--  Javadocs (API) -->
+		    <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-javadoc-plugin</artifactId>
+        		<version>2.9</version>
+        		<configuration>
+          			<excludePackageNames>org.gearman.*</excludePackageNames>
+        		</configuration>
+        		<executions>
+          			<execution>
+            			<id>javadoc</id>
+            			<phase>package</phase>
+            			<goals>
+              				<goal>jar</goal>
+            			</goals>
+          			</execution>
+        		</executions>
+      		</plugin>
+		    
+		    <!-- Source -->
+		    <plugin>
+        		<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-source-plugin</artifactId>
+        		<version>2.2.1</version>
+        		<executions>
+          			<execution>
+            			<id>attach-sources</id>
+            			<phase>package</phase>
+            			<goals>
+              				<goal>jar</goal>
+            			</goals>
+          			</execution>
+        		</executions>
+      		</plugin>
+      		
+      		<plugin>
+  				<artifactId>maven-assembly-plugin</artifactId>
+  				<version>2.2-beta-5</version>
+  				<configuration>
+	    			<descriptors>
+	      				<descriptor>src/main/assembly/zip.xml</descriptor>
+	    			</descriptors>
+  				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			
+		</plugins>
+		
+	</build>
+	
+	<dependencies>
+	    
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j.version}</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>test</scope>
+		</dependency>
+		
+	</dependencies>
+  
+</project>
