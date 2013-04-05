@@ -3,13 +3,7 @@
     <name>Java Gearman Service</name>
     <url>http://code.google.com/p/java-gearman-service/</url>
     <description>
-    	Java Gearman Service is an easy-to-use distributed network application framework 
-    	implementing the gearman protocol used to farm out work to other machines or 
-    	processes that are better suited to do the work. It allows you to do work in 
-    	parallel, to load balance processing, and to call functions between languages. 
-    	It can be used in a variety of applications, from high-availability web sites to 
-    	the transport of database replication events. In other words, it is the nervous 
-    	system for how distributed processing communicates.
+    	Java Gearman Service is an easy-to-use distributed network application framework implementing the gearman protocol used to farm out work to other machines or processes that are better suited to do the work. It allows you to do work in parallel, to load balance processing, and to call functions between languages. It can be used in a variety of applications, from high-availability web sites to the transport of database replication events. In other words, it is the nervous system for how distributed processing communicates.
     </description>
     <inceptionYear>2010</inceptionYear>
     <organization>
