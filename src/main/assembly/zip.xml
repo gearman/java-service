@@ -17,17 +17,17 @@
 		</fileSet>
 		<fileSet>
 		    <outputDirectory>/</outputDirectory>
-			<directory>src/main/resources</directory>
+			<directory>${assembly.licence.dir}</directory>
 			<includes>
 			    <include>
-			        License.txt
+			        ${assembly.licence}
 			    </include>
 			</includes>
 		</fileSet>
 	</fileSets>
 	<dependencySets>
 		<dependencySet>
-			<outputDirectory>/lib</outputDirectory>
+			<outputDirectory>${assembly.lib.dest}</outputDirectory>
 			<useProjectArtifact>false</useProjectArtifact>
 			<unpack>false</unpack>
 			<scope>runtime</scope>
