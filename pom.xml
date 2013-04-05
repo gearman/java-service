@@ -3,25 +3,39 @@
     <name>Java Gearman Service</name>
     <url>http://code.google.com/p/java-gearman-service/</url>
     <description>
-    	Gearman provides a generic application framework to farm out work to other 
-    	machines or processes that are better suited to do the work. It allows you 
-    	to do work in parallel, to load balance processing, and to call functions 
-    	between languages. It can be used in a variety of applications, from high-
-    	availability web sites to the transport of database replication events. In 
-    	other words, it is the nervous system for how distributed processing 
-    	communicates.
+    	Java Gearman Service is an easy-to-use distributed network application framework 
+    	implementing the gearman protocol used to farm out work to other machines or 
+    	processes that are better suited to do the work. It allows you to do work in 
+    	parallel, to load balance processing, and to call functions between languages. 
+    	It can be used in a variety of applications, from high-availability web sites to 
+    	the transport of database replication events. In other words, it is the nervous 
+    	system for how distributed processing communicates.
     </description>
     <inceptionYear>2010</inceptionYear>
     <organization>
 		<name>gearman</name>
 		<url>http://www.gearman.org</url>
 	</organization>
+	
+	<scm>
+    	<connection>scm:svn:http://java-gearman-service.googlecode.com/svn/trunk</connection>
+    	<developerConnection>scm:svn:https://java-gearman-service.googlecode.com/svn/trunk</developerConnection>
+    	<url>http://java-gearman-service.googlecode.com/svn/trunk</url>
+	</scm>
     
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>java-gearman-service</groupId>
-	<artifactId>jgs</artifactId>
-	<version>0.6.6-SNAPSHOT</version>
+	<groupId>org.gearman.jgs</groupId>
+	<artifactId>java-gearman-service</artifactId>
+	<version>0.7.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
+	
+	<licenses>
+        <license>
+            <name>BSD</name>
+            <url>http://opensource.org/licenses/BSD-2-Clause</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 	
 	<properties>
 	    <slf4j.version>[1.6,2.0)</slf4j.version>
@@ -32,6 +46,9 @@
 	    <assembly.licence>License.txt</assembly.licence>
 	    <assembly.licence.dir>src/main/resources</assembly.licence.dir>
 	    <assembly.lib.dest>lib</assembly.lib.dest>
+	    
+	    <scm.connection>scm:svn:http://java-gearman-service.googlecode.com/svn/trunk</scm.connection>
+	    <scm.url>http://java-gearman-service.googlecode.com/svn/trunk</scm.url>
 	</properties>
 	
 	<build>
@@ -108,6 +125,15 @@
           			</execution>
         		</executions>
 			</plugin>
+			
+			<plugin>
+        		<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-scm-plugin</artifactId>
+        		<version>1.8.1</version>
+        		<configuration>
+          			<connectionType>connection</connectionType>
+        		</configuration>
+      		</plugin>
 			
 		</plugins>
 		
