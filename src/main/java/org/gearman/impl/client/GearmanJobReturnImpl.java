@@ -60,7 +60,7 @@ public class GearmanJobReturnImpl implements GearmanJobReturn, BackendJobReturn 
 			long startTime = System.currentTimeMillis();
 			
 			this.wait(timeout);
-			timeout = timeout - (startTime - System.currentTimeMillis());
+			timeout = timeout - (System.currentTimeMillis()-startTime);
 		}
 		
 		if(this.isEOF())
