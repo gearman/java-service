@@ -27,6 +27,8 @@
 
 package org.gearman.impl.client;
 
+import java.util.Arrays;
+
 import org.gearman.GearmanJobEvent;
 import org.gearman.GearmanJobEventType;
 
@@ -49,4 +51,10 @@ public class GearmanJobEventImpl implements GearmanJobEvent {
 	public byte[] getData() {
 		return data;
 	}
+
+	@Override
+	public String toString() {
+		return "GearmanJobEvent: " + type + " : " + new String(data); 
+	}
+	
 }

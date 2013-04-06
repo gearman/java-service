@@ -442,13 +442,17 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	}
 	
 	public final void dropServer() {
+		dropServer(false);
+	}
+	
+	final void dropServer(boolean isOnShutdown) {
 		final ControllerState oldState;
 		synchronized(this.lock) {
 			oldState = this.state;
 			if(this.state.equals(ControllerState.DROPPED)) return;
 			
 			this.state = ControllerState.DROPPED;
-			sc.removeServer(this.key);
+			sc.removeServer(this.key, true);
 			
 			if(this.conn!=null) {
 				try {
@@ -537,6 +541,10 @@ public abstract class AbstractConnectionController implements ConnectionControll
 				taskJoin.setValue(new GearmanJobStatusImpl(isKnown, isRunning, numerator, denominator));
 			}
 		}
+	}
+	
+	public boolean isShutdown() {
+		return sc.isShutdown();
 	}
 	
 	private final class Closer implements Runnable {

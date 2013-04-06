@@ -126,18 +126,27 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 
 	@Override
 	public void removeAllServers() {
+		removeAllServers(false);
+	}
+	
+	private void removeAllServers(boolean isOnShutdown) {
 		List<GearmanServer> srvrs = new ArrayList<GearmanServer>(this.connMap.keySet());
 		for(GearmanServer srvr : srvrs) {
-			this.removeServer(srvr);
+			this.removeServer(srvr, isOnShutdown);
 		}
 	}
 
 	@Override
 	public boolean removeServer(GearmanServer srvr) {
+		return removeServer(srvr, false);
+	}
+	
+	boolean removeServer(GearmanServer srvr, boolean isOnShutdown) {
 		try {
 			closeLock.readLock().lock();
 			
-			if(this.isShutdown) throw new IllegalStateException("In Shutdown State");
+			if(this.isShutdown && !isOnShutdown)
+				throw new IllegalStateException("In Shutdown State");
 			
 			X x = this.connMap.remove(srvr);
 			if(x!=null) {
@@ -214,10 +223,10 @@ public abstract class AbstractJobServerPool <X extends AbstractConnectionControl
 	public synchronized void shutdown() {
 		try {
 			closeLock.writeLock().lock();
-			
 			if(this.isShutdown) return;
-			this.removeAllServers();
 			this.isShutdown = true;
+			
+			this.removeAllServers(true);
 		} finally {
 			closeLock.writeLock().unlock();
 		}

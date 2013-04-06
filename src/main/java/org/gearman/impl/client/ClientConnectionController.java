@@ -90,7 +90,7 @@ abstract class ClientConnectionController extends AbstractConnectionController {
 		while(it.hasNext()) {
 			BackendJobReturn jobReturn = it.next();
 			it.remove();
-			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_JOB_DISCONNECT);
+			jobReturn.eof(isShutdown() ? GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_SERVICE_SHUTDOWN : GearmanJobEventImmutable.GEARMAN_JOB_DISCONNECT);
 		}
 		
 		this.responceTimeout = Long.MAX_VALUE;
