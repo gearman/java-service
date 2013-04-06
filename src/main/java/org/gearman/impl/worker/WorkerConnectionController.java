@@ -291,14 +291,16 @@ abstract class WorkerConnectionController extends AbstractConnectionController {
 		if(time-this.grabTimeout>GRAB_TIMEOUT) {
 			// If the server fails to send back a response to the GRAB_JOB packet,
 			// we log the error and close the connection without re-queuing
+			// TODO LOG???
 			
-			
-			// If a timeout occurs, we need to rlease the zero lock accured when
+			// If a timeout occurs, we need to release the zero lock accrued when
 			// the GRAB_JOB packet was sent
 			assert zeroLock.isLocked();
 			zeroLock.unlock();
 			
 			super.timeout();
+			
+			this.getDispatcher().done();
 		} else if(time-this.noopTimeout>NOOP_TIMEOUT) {
 			this.noop();
 		} else if(time-this.pingTimeout>PING_TIMEOUT) {

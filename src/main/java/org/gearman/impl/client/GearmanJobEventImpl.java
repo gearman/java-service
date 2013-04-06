@@ -27,8 +27,6 @@
 
 package org.gearman.impl.client;
 
-import java.util.Arrays;
-
 import org.gearman.GearmanJobEvent;
 import org.gearman.GearmanJobEventType;
 
