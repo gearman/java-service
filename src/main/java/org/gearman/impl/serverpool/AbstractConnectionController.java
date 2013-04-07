@@ -241,20 +241,19 @@ public abstract class AbstractConnectionController implements ConnectionControll
 	
 	/**
 	 * Tell this ConnectionController that it has had a response timeout.
-	 * The following will occure:
+	 * The following will occur:
 	 *  1) The connection will be closed
 	 *  2) The "onLostConnection" method will be called with a RESPONCE_TIMEOUT
 	 */
 	protected final void timeout() {
 		synchronized(this.lock) {
 			if(this.state.equals(ControllerState.OPEN)) {
+				LOGGER.warn(GearmanUtils.toString(conn) + " : Server failed to respond");
 				this.closeServer();
 				this.onLostConnection(sc.getPolicy(), GearmanLostConnectionGrounds.UNEXPECTED_DISCONNECT);
 			}
 		}
 	}
-	
-	
 	
 	public final GearmanServerInterface getKey() {
 		return this.key;
