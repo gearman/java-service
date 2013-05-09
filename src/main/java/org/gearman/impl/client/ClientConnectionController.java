@@ -47,8 +47,8 @@ import static org.gearman.context.GearmanContext.LOGGER;
 
 abstract class ClientConnectionController extends AbstractConnectionController {
 	
-	private static final int RESPONCE_TIMEOUT = 19000;
-	private static final int IDLE_TIMEOUT = 9000;
+	private static final int RESPONCE_TIMEOUT = 19000;	// TODO decouple property
+	private static final int IDLE_TIMEOUT = 9000;		// TODO decouple property
 	
 	private final InnerGearmanCallback jobSendCallback = new InnerGearmanCallback();
 	

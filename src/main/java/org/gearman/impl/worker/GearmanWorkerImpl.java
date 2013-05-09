@@ -47,7 +47,8 @@ import org.gearman.impl.serverpool.AbstractJobServerPool;
 
 public class GearmanWorkerImpl extends AbstractJobServerPool<WorkerConnectionController> implements GearmanWorker {
 	
-	private static final long HEARTBEAT_PERIOD = 20000000000L;
+	// TODO Do something else. I don't like the heart-beat mechanism 
+	private static final long HEARTBEAT_PERIOD = 20000000000L; // TODO decouple property
 	
 	/**
 	 * Periodically checks the state of the connections while jobs can be pulled 

@@ -62,4 +62,16 @@ public interface GearmanConnection<X> {
 	public String getHostAddress();
 	public boolean isClosed();
 	public void close() throws IOException;
+	
+	// TODO create an optional response timeout mechanism
+	
+	/*
+	 *  TODO create a ping timeout mechanism
+	 *  I'm thinking the connection will ping the server with an ECHO packet by default.
+	 *  However, it should be overwritable. The worker may overwrite it to a NOOP packet
+	 *  when it's waiting to work.
+	 *  
+	 *  Also, it needs to be configurable to allow the client to disconnect after a period
+	 *  of time
+	 */
 }

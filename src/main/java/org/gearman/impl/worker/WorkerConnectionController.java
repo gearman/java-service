@@ -46,9 +46,9 @@ import static org.gearman.context.GearmanContext.LOGGER;
 
 abstract class WorkerConnectionController extends AbstractConnectionController {
 	
-	private static final int NOOP_TIMEOUT = 59000;
-	private static final int GRAB_TIMEOUT = 19000;
-	private static final int PING_TIMEOUT = 59000;
+	private static final int NOOP_TIMEOUT = 59000;	// TODO decouple property
+	private static final int GRAB_TIMEOUT = 19000;	// TODO decouple property
+	private static final int PING_TIMEOUT = 59000;	// TODO decouple property
 	
 	private final ZeroLock zeroLock = new ZeroLock(new Runnable(){
 		@Override
