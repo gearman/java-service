@@ -30,6 +30,7 @@ package org.gearman.impl.client;
 import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +51,6 @@ import org.gearman.impl.serverpool.AbstractJobServerPool;
 import org.gearman.impl.serverpool.ControllerState;
 import org.gearman.impl.serverpool.GearmanJobStatusImpl;
 import org.gearman.impl.util.ByteArray;
-import org.gearman.impl.util.GearmanUtils;
 import org.gearman.impl.util.TaskJoin;
 
 public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnectionController> implements GearmanClient {
@@ -459,17 +459,26 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 		return submitJob(functionName, data, priority, true);
 	}
 	
+	@Override
+	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, String uniqueId) {
+		return submitJob(functionName, data, priority, true, uniqueId);
+	}
+	
 	private GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
+		return submitJob(functionName, data, priority, isBackground, null);
+	}
+	
+	private GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground, String uniqueId) {
 		final GearmanJobReturnImpl jobReturn = new GearmanJobReturnImpl();
-		submitJob(jobReturn, functionName, data, priority, isBackground);
+		submitJob(jobReturn, functionName, data, priority, isBackground, uniqueId);
 		return jobReturn;
 	}
 	
-	private void submitJob(BackendJobReturn jobReturn, String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground) {
+	private void submitJob(BackendJobReturn jobReturn, String functionName, byte[] data, GearmanJobPriority priority, boolean isBackground, String uniqueId) {
 		if(functionName==null) throw new NullPointerException();
 		if(data==null) data = new byte[0];
 		if(priority==null) priority = GearmanJobPriority.NORMAL_PRIORITY;
-		
+		if(uniqueId==null) uniqueId = UUID.randomUUID().toString();
 		if(this.isShutdown()) {
 			jobReturn.eof(GearmanJobEventImmutable.GEARMAN_SUBMIT_FAIL_SERVICE_SHUTDOWN);
 			return;
@@ -478,7 +487,7 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 			return;
 		}
 		
-		this.addJob(new ClientJobSubmission(functionName, data, GearmanUtils.createUID() , jobReturn, priority, isBackground));
+		this.addJob(new ClientJobSubmission(functionName, data, uniqueId.getBytes() , jobReturn, priority, isBackground));
 	}
 
 	@Override
@@ -505,7 +514,7 @@ public class ClientImpl extends AbstractJobServerPool<ClientImpl.InnerConnection
 		if(callback==null) throw new NullPointerException();
 		
 		final GearmanJobEventCallbackCaller<A> jobReturn = new GearmanJobEventCallbackCaller<A>(attachment, callback, this.getGearman().getScheduler());
-		submitJob(jobReturn, functionName, data, priority, isBackground);
+		submitJob(jobReturn, functionName, data, priority, isBackground, null);
 		return jobReturn;
 	}
 }
