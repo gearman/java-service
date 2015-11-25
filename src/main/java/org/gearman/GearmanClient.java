@@ -165,6 +165,23 @@ public interface GearmanClient extends GearmanService {
 	 * 		gearman job data
 	 * @param priority
 	 * 		gearman job priority
+	 * @param uniqueid
+	 * 		gearman unique job id (not queue-in the same job multiple times)
+	 * @return
+	 * 		The job return used to poll submit operation status
+	 * @throws NullPointerException
+	 * 		If the function name is <code>null</code>
+	 */
+	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, String uniqueid);
+	
+	/**
+	 * Submits a background job to a registered job server
+	 * @param functionName
+	 * 		gearman function name
+	 * @param data
+	 * 		gearman job data
+	 * @param priority
+	 * 		gearman job priority
 	 * @param attachment
 	 * 		An object used to identify this job from within the
 	 * @param callback
@@ -245,4 +262,5 @@ public interface GearmanClient extends GearmanService {
 	 * 		The policy for handling unexpected disconnects
 	 */
 	public void setLostConnectionPolicy(GearmanLostConnectionPolicy policy);
+	
 }
