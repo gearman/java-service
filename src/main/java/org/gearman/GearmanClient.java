@@ -27,7 +27,6 @@
 
 package org.gearman;
 
-import java.io.IOException;
 import java.util.Collection;
 
 /**
@@ -43,10 +42,8 @@ public interface GearmanClient extends GearmanService {
 	 * 		The job handle of the of the job in question. 
 	 * @return
 	 * 		The job status of the job in question.
-	 * @throws IOException
-	 * 		If an I/O exception occurs while performing this operation 
 	 */
-	public GearmanJobStatus getStatus(byte[] jobHandle);
+	GearmanJobStatus getStatus(byte[] jobHandle);
 	
 	/**
 	 * Sends a job to a registered job server.
@@ -59,7 +56,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		if the function name is <code>null</code>
 	 */
-	public GearmanJobReturn submitJob(String functionName, byte[] data);
+	GearmanJobReturn submitJob(String functionName, byte[] data);
 	
 	/**
 	 * Sends a job to a registered job server.
@@ -76,7 +73,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		if the function name is <code>null</code> or the callback is null
 	 */
-	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
+	<A> GearmanJoin<A> submitJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Sends a job to a registered job server.
@@ -91,7 +88,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		if the function name is <code>null</code>
 	 */
-	public GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority);
+	GearmanJobReturn submitJob(String functionName, byte[] data, GearmanJobPriority priority);
 	
 	/**
 	 * Sends a job to a registered job server.
@@ -110,7 +107,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		If the function name or callback is <code>null</code>
 	 */
-	public <A> GearmanJoin<A> submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	<A> GearmanJoin<A> submitJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Submits a background job to a registered job server
@@ -123,7 +120,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		If the function name is <code>null</code>
 	 */
-	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data);
+	GearmanJobReturn submitBackgroundJob(String functionName, byte[] data);
 	
 	/**
 	 * Submits a background job to a registered job server
@@ -140,7 +137,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		if the function name or callback is <code>null</code>
 	 */
-	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
+	<A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Submits a background job to a registered job server
@@ -155,7 +152,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		If the function name is <code>null</code>
 	 */
-	public GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority);
+	GearmanJobReturn submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority);
 	
 	/**
 	 * Submits a background job to a registered job server
@@ -174,7 +171,7 @@ public interface GearmanClient extends GearmanService {
 	 * @throws NullPointerException
 	 * 		if the function name or callback is <code>null</code>
 	 */
-	public <A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
+	<A> GearmanJoin<A> submitBackgroundJob(String functionName, byte[] data, GearmanJobPriority priority, A attachment, GearmanJobEventCallback<A> callback);
 	
 	/**
 	 * Adds a {@link GearmanServer} to the service.<br>
@@ -185,19 +182,19 @@ public interface GearmanClient extends GearmanService {
 	 * @return
 	 * 		<code>true</code> if the server was added to the service
 	 */
-	public boolean addServer(GearmanServer server);
+	boolean addServer(GearmanServer server);
 	
 	/**
 	 * Returns the number of servers managed by this service
 	 * @return
 	 * 		The number of servers managed by this service
 	 */
-	public int getServerCount();
+	int getServerCount();
 	
 	/**
 	 * Removes all servers from this service
 	 */
-	public void removeAllServers();
+	void removeAllServers();
 	
 	/**
 	 * Removes the given server from the list of available server to
@@ -206,21 +203,21 @@ public interface GearmanClient extends GearmanService {
 	 * @return
 	 * 		<code>true</code> if the service contained the given server and it was successfully removed. <code>false</code> if the service did not contain the given server
 	 */
-	public boolean removeServer(GearmanServer server);
+	boolean removeServer(GearmanServer server);
 	
 	/**
 	 * Sets the client ID
 	 * @param id
 	 * 		the new client ID
 	 */
-	public void setClientID(String id);
+	void setClientID(String id);
 	
 	/**
 	 * Gets the current client ID
 	 * @return
 	 * 		The current client ID
 	 */
-	public String getClientID();
+	String getClientID();
 	
 	/**
 	 * Tests if this client has the given server
@@ -229,14 +226,14 @@ public interface GearmanClient extends GearmanService {
 	 * @return
 	 * 		<code>true</code> if this client contains the given server
 	 */
-	public boolean hasServer(GearmanServer server);
+	boolean hasServer(GearmanServer server);
 	
 	/**
 	 * Returns the collection of servers this service is managing
 	 * @return
 	 * 		The collection of servers this service is managing
 	 */
-	public Collection<GearmanServer> getServers();
+	Collection<GearmanServer> getServers();
 	
 	/**
 	 * Sets the {@link GearmanLostConnectionPolicy}. The lost connection policy describes
@@ -244,5 +241,5 @@ public interface GearmanClient extends GearmanService {
 	 * @param policy
 	 * 		The policy for handling unexpected disconnects
 	 */
-	public void setLostConnectionPolicy(GearmanLostConnectionPolicy policy);
+	void setLostConnectionPolicy(GearmanLostConnectionPolicy policy);
 }
